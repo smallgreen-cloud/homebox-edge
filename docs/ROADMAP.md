@@ -13,13 +13,14 @@ Implemented in the current v0.1 workspace:
 - Remote MCP CRUD/search/import/export tools with complete strict input schemas
 - individually revocable KV-backed MCP keys
 
-Release gates still required before a public compatibility claim:
+Release gates:
 
-1. Run a real HomeBox v0.26.2 → HomeBox Edge → clean HomeBox v0.26.2 round trip.
-2. Compare every field listed in `HOMEBOX-COMPATIBILITY.md`.
-3. Configure real D1/KV IDs and `ADMIN_TOKEN` outside source control.
-4. Apply remote migrations, deploy, and verify both the platform URL and any custom domain.
-5. Run authenticated mobile and desktop browser QA against the deployed build.
+- [ ] Run a real HomeBox v0.26.2 → HomeBox Edge → clean HomeBox v0.26.2 round trip and compare every field listed in `HOMEBOX-COMPATIBILITY.md`.
+- [x] Configure production D1/KV bindings and keep `ADMIN_TOKEN` outside source control.
+- [x] Apply remote migrations and deploy the Worker to its platform URL.
+- [x] Run authenticated 375px, 768px, and 1280px browser QA against the deployed build.
+
+The production infrastructure and browser gates were verified on 2026-08-09. The remaining unchecked round trip is required before expanding the compatibility claim beyond the pinned contract tests.
 
 ## Phase 2 — collection ZIP and attachments
 
