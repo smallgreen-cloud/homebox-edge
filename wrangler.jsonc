@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "homebox-edge",
+  "main": "src/index.ts",
+  "account_id": "cb8f37b75da7355292c6c23a17adf6c6",
+  // Wrangler 4.120.0 bundled workerd supports through 2026-08-08.
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "vars": {
+    "PUBLIC_BASE_URL": "https://homebox-edge.example.workers.dev"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "homebox-edge",
+      "database_id": "050d4d6b-fb41-4d5d-95bf-630456810793",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "MCP_KEYS",
+      "id": "0012d95bf76446ce8c271b85b896dd3e"
+    }
+  ],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  }
+}

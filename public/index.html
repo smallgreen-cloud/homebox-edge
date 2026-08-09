@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#243c31">
+    <title>HomeBox Edge｜家庭資產台帳</title>
+    <link rel="stylesheet" href="/styles.css?v=0.1.0">
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到資產清單</a>
+    <div class="top-rule" aria-hidden="true"><span>HOME / INVENTORY / 01</span></div>
+
+    <header class="masthead">
+      <a class="wordmark" href="/" aria-label="HomeBox Edge 首頁">
+        <span class="wordmark-mark">H<span>B</span></span>
+        <span>HomeBox<br>Edge</span>
+      </a>
+      <div class="masthead-note">一份跟著你走的家庭資產台帳<br><strong>HomeBox v0.26.2 CSV compatible</strong></div>
+      <button id="logoutButton" class="text-button" type="button" hidden>鎖定台帳</button>
+    </header>
+
+    <main id="main-content">
+      <section id="login" class="login-stage" aria-labelledby="loginTitle">
+        <div class="login-copy">
+          <p class="eyebrow">PRIVATE LEDGER</p>
+          <h1 id="loginTitle">房子會變，<br>物件要有跡可循。</h1>
+          <p>登入後從手機盤點、搜尋與補記；需要搬家時，用 HomeBox CSV 帶走。</p>
+        </div>
+        <form id="loginForm" class="login-form">
+          <label for="adminToken">管理憑證</label>
+          <input id="adminToken" name="adminToken" type="password" autocomplete="current-password" required>
+          <button class="primary-button" type="submit">開啟家庭台帳</button>
+          <p class="field-note">憑證只保存在這台裝置的瀏覽器。</p>
+        </form>
+      </section>
+
+      <section id="inventory" class="inventory" hidden>
+        <div class="inventory-rail" aria-label="資產摘要">
+          <p class="eyebrow">ACTIVE INDEX</p>
+          <p><strong id="assetCount">0</strong><span id="assetCountLabel">件未封存資產</span></p>
+          <p class="compat-stamp">HB<br><span>0.26.2</span></p>
+        </div>
+
+        <div class="inventory-main">
+          <div class="inventory-heading">
+            <div>
+              <p class="eyebrow">HOUSEHOLD ASSETS</p>
+              <h1>家中物件</h1>
+            </div>
+            <div class="heading-actions">
+              <button id="exportButton" class="secondary-button" type="button">匯出 HomeBox CSV</button>
+            </div>
+          </div>
+
+          <form id="searchForm" class="search-line" role="search">
+            <label class="sr-only" for="searchInput">搜尋資產</label>
+            <input id="searchInput" name="q" type="search" placeholder="搜尋名稱、位置、品牌、序號或標籤">
+            <button type="submit" aria-label="搜尋資產">搜尋</button>
+          </form>
+          <label class="archive-filter" for="includeArchived">
+            <input id="includeArchived" type="checkbox">
+            同時顯示已封存資產
+          </label>
+
+          <div class="workbench">
+            <details class="workbench-section" open>
+              <summary>新增一件資產 <span>＋</span></summary>
+              <form id="assetForm" class="asset-form">
+                <label>名稱<input name="name" required maxlength="255" placeholder="例如：客廳除濕機"></label>
+                <label>位置路徑<input name="location" placeholder="家 / 客廳 / 電視櫃"></label>
+                <label>標籤<input name="tags" placeholder="家電；保固中"></label>
+                <label>數量<input name="quantity" type="number" min="0" step="0.01" value="1"></label>
+                <label class="wide">備註<textarea name="notes" rows="2" placeholder="購買來源、收納方式或家人需要知道的事"></textarea></label>
+                <button class="primary-button" type="submit">加入台帳</button>
+              </form>
+            </details>
+
+            <details id="importPanel" class="workbench-section">
+              <summary>從 HomeBox 匯入 <span>↧</span></summary>
+              <div class="import-flow">
+                <label for="csvFile">選擇 CSV 或 TSV</label>
+                <input id="csvFile" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values">
+                <button id="previewImportButton" class="secondary-button" type="button">先檢查檔案</button>
+                <div id="importPreview" class="import-preview" aria-live="polite"></div>
+                <button id="confirmImportButton" class="primary-button" type="button" hidden>確認匯入這批資產</button>
+              </div>
+            </details>
+
+            <details class="workbench-section">
+              <summary>連接 AI 工具 <span>⌁</span></summary>
+              <div class="key-flow">
+                <p>建立可隨時撤銷的 Remote MCP Connector URL。</p>
+                <button id="createKeyButton" class="secondary-button" type="button">建立 MCP 連線</button>
+                <output id="connectorOutput" aria-live="polite"></output>
+                <div id="keyList" class="key-list" aria-live="polite"></div>
+              </div>
+            </details>
+          </div>
+
+          <section class="asset-section" aria-labelledby="assetListTitle">
+            <div class="section-label">
+              <h2 id="assetListTitle">資產索引</h2>
+              <button id="clearSearchButton" class="text-button" type="button" hidden>清除搜尋</button>
+            </div>
+            <div id="assetGrid" class="asset-grid" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="assetDialog" class="asset-dialog" aria-labelledby="assetDialogTitle">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">ASSET RECORD</p>
+          <h2 id="assetDialogTitle">資產詳情</h2>
+        </div>
+        <button id="closeAssetDialog" class="text-button" type="button" aria-label="關閉資產詳情">關閉</button>
+      </div>
+      <form id="assetEditForm" class="asset-edit-form">
+        <input name="id" type="hidden">
+        <label>名稱<input name="name" required maxlength="255"></label>
+        <label>資產編號<input name="asset_id" pattern="[0-9]{3}-[0-9]{3,}" placeholder="000-123"></label>
+        <label>位置路徑<input name="location" placeholder="家 / 客廳 / 電視櫃"></label>
+        <label>標籤<input name="tags" placeholder="家電；保固中"></label>
+        <label>數量<input name="quantity" type="number" step="any" required></label>
+        <label>品牌<input name="manufacturer" maxlength="255"></label>
+        <label>型號<input name="model_number" maxlength="255"></label>
+        <label>序號<input name="serial_number" maxlength="255"></label>
+        <label>購買價格<input name="purchase_price" type="number" step="any"></label>
+        <label class="wide">備註<textarea name="notes" rows="3" maxlength="1000"></textarea></label>
+        <label class="check-field"><input name="insured" type="checkbox"> 已投保</label>
+        <label class="check-field"><input name="lifetime_warranty" type="checkbox"> 終身保固</label>
+        <div class="dialog-actions wide">
+          <button id="cancelAssetEdit" class="secondary-button" type="button">取消</button>
+          <button class="primary-button" type="submit">儲存變更</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <script type="module" src="/app.js?v=0.1.0"></script>
+  </body>
+</html>

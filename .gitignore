@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.wrangler/
+coverage/
+
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+
+.DS_Store
+*.log
+*.cpuprofile
+worker-configuration.d.ts
