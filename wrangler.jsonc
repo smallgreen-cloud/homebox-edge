@@ -7,8 +7,9 @@
   "compatibility_date": "2026-08-08",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "preview_urls": false,
   "vars": {
-    "PUBLIC_BASE_URL": "https://homebox-edge.example.workers.dev"
+    "PUBLIC_BASE_URL": "https://homebox-edge.alan-chen75.workers.dev"
   },
   "observability": {
     "enabled": true,

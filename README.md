@@ -4,6 +4,8 @@ HomeBox Edge 是一套非官方、serverless、HomeBox-compatible 的家庭資�
 
 它不是 HomeBox fork，也不包含 HomeBox 的 AGPL 程式碼。v0.1 的「HomeBox-compatible」明確指向 HomeBox `v0.26.2` 的物件 CSV/TSV 雙向交換。
 
+正式服務：<https://homebox-edge.alan-chen75.workers.dev>
+
 ## 現有功能
 
 - 手機與桌面共用的家庭資產台帳
