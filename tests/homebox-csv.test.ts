@@ -13,6 +13,10 @@ const fixture = readFileSync(
   new URL("./fixtures/homebox-v0.26.2-all-fields.csv", import.meta.url),
   "utf8",
 );
+const officialExportFixture = readFileSync(
+  new URL("./fixtures/homebox-v0.26.2-official-export.csv", import.meta.url),
+  "utf8",
+);
 
 describe("HomeBox v0.26.2 CSV compatibility", () => {
   it("parses every pinned field, custom fields, tags, location and parent refs", () => {
@@ -52,6 +56,15 @@ describe("HomeBox v0.26.2 CSV compatibility", () => {
       purchase_date: "2026-02-03",
       sold_date: "2026-08-04",
     });
+  });
+
+  it("imports item rows from the official exporter without treating locations as assets", () => {
+    const assets = parseHomeboxCsv(officialExportFixture);
+
+    expect(assets).toHaveLength(2);
+    expect(assets.map((asset) => asset.import_ref)).toEqual(["parent-ref", "child-ref"]);
+    expect(assets.map((asset) => asset.name)).toEqual(["Toolbox", "Screwdriver"]);
+    expect(assets.every((asset) => asset.url === undefined)).toBe(true);
   });
 
   it("preserves finite negative values accepted by the pinned HomeBox entity schema", () => {

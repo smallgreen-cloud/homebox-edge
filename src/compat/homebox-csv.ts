@@ -1,4 +1,5 @@
 import { HomeAssetSchema, type HomeAsset } from "../core/asset";
+import { PublicHttpError } from "../errors";
 
 export const HOMEBOX_CANONICAL_HEADERS = [
   "HB.import_ref",
@@ -31,8 +32,11 @@ export const HOMEBOX_CANONICAL_HEADERS = [
 const MAX_CSV_BYTES = 5 * 1024 * 1024;
 const MAX_ROWS = 20_000;
 
-export class HomeboxCsvError extends Error {
-  override readonly name = "HomeboxCsvError";
+export class HomeboxCsvError extends PublicHttpError {
+  constructor(message: string, status: 400 | 413 = 400) {
+    super(message, status);
+    this.name = "HomeboxCsvError";
+  }
 }
 
 function detectDelimiter(input: string): "," | "\t" {
@@ -176,9 +180,34 @@ function cell(row: readonly string[], index: Map<string, number>, ...headers: st
   return "";
 }
 
+function classifyHomeboxUrl(value: string): {
+  kind: "item" | "location";
+  portableUrl?: string;
+} {
+  const trimmed = value.trim();
+  if (trimmed === "") return { kind: "item" };
+
+  let pathname: string;
+  let isRelative = false;
+  try {
+    if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
+      pathname = new URL(trimmed, "https://homebox.invalid").pathname;
+      isRelative = true;
+    } else {
+      pathname = new URL(trimmed).pathname;
+    }
+  } catch {
+    return { kind: "item", portableUrl: trimmed };
+  }
+
+  if (/^\/location\/[^/]+\/?$/.test(pathname)) return { kind: "location" };
+  if (/^\/item\/[^/]+\/?$/.test(pathname) && isRelative) return { kind: "item" };
+  return { kind: "item", portableUrl: trimmed };
+}
+
 export function parseHomeboxCsv(input: string): HomeAsset[] {
   if (new TextEncoder().encode(input).byteLength > MAX_CSV_BYTES) {
-    throw new HomeboxCsvError("CSV exceeds 5 MB limit");
+    throw new HomeboxCsvError("CSV exceeds 5 MB limit", 413);
   }
   const rows = parseTable(input, detectDelimiter(input));
   if (rows.length < 2) throw new HomeboxCsvError("sheet must have a header and at least one data row");
@@ -195,26 +224,31 @@ export function parseHomeboxCsv(input: string): HomeAsset[] {
     throw new HomeboxCsvError("custom field header requires a name");
   }
 
-  const assets = rows.slice(1).map((row, offset) => {
+  const assets = rows.slice(1).flatMap((row, offset) => {
     if (row.length !== headers.length) {
       throw new HomeboxCsvError(
         `row ${offset + 2} has ${row.length} columns, expected ${headers.length}`,
       );
     }
+    const entityUrl = classifyHomeboxUrl(cell(row, index, "HB.url"));
+    // HomeBox exports locations and items through the same CSV shape. Its own
+    // CSV import path expects callers to exclude location entity rows; they are
+    // represented by each item's HB.location hierarchy instead.
+    if (entityUrl.kind === "location") return [];
     const customFields = Object.fromEntries(
       custom
         .map(({ header, column }) => [header.slice("HB.field.".length), row[column] ?? ""] as const)
         .filter(([, value]) => value !== ""),
     );
     try {
-      return HomeAssetSchema.parse({
+      return [HomeAssetSchema.parse({
         import_ref: optional(cell(row, index, "HB.import_ref")),
         parent_import_ref: optional(cell(row, index, "HB.parent_import_ref")),
         location: splitList(cell(row, index, "HB.location"), "/"),
         tags: splitList(cell(row, index, "HB.tags", "HB.labels"), ";"),
         asset_id: parseAssetId(cell(row, index, "HB.asset_id")),
         archived: parseBoolean(cell(row, index, "HB.archived")),
-        url: optional(cell(row, index, "HB.url")),
+        url: entityUrl.portableUrl,
         name: cell(row, index, "HB.name"),
         quantity: parseNumber(cell(row, index, "HB.quantity")),
         description: optional(cell(row, index, "HB.description")),
@@ -234,7 +268,7 @@ export function parseHomeboxCsv(input: string): HomeAsset[] {
         sold_date: parseDate(cell(row, index, "HB.sold_date", "HB.sold_time")),
         sold_notes: optional(cell(row, index, "HB.sold_notes")),
         custom_fields: customFields,
-      });
+      })];
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new HomeboxCsvError(`invalid row ${offset + 2}: ${message}`);
