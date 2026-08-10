@@ -6,17 +6,13 @@ CREATE TRIGGER assets_parent_insert
 BEFORE INSERT ON assets
 WHEN NEW.parent_import_ref IS NOT NULL AND trim(NEW.parent_import_ref) <> ''
 BEGIN
-  SELECT CASE
-    WHEN NEW.import_ref = NEW.parent_import_ref
-    THEN RAISE(ABORT, 'cyclic parent refs')
-  END;
-  SELECT CASE
-    WHEN NOT EXISTS (
+  SELECT RAISE(ABORT, 'cyclic parent refs')
+  WHERE NEW.import_ref = NEW.parent_import_ref;
+  SELECT RAISE(ABORT, 'parent import ref was not found')
+  WHERE NOT EXISTS (
       SELECT 1 FROM assets
       WHERE user_id = NEW.user_id AND import_ref = NEW.parent_import_ref
-    )
-    THEN RAISE(ABORT, 'parent import ref was not found')
-  END;
+    );
 END;
 
 CREATE TRIGGER assets_import_ref_update
@@ -36,15 +32,13 @@ CREATE TRIGGER assets_parent_update
 BEFORE UPDATE OF import_ref, parent_import_ref ON assets
 WHEN NEW.parent_import_ref IS NOT NULL AND trim(NEW.parent_import_ref) <> ''
 BEGIN
-  SELECT CASE
-    WHEN NOT EXISTS (
+  SELECT RAISE(ABORT, 'parent import ref was not found')
+  WHERE NOT EXISTS (
       SELECT 1 FROM assets
       WHERE user_id = NEW.user_id AND import_ref = NEW.parent_import_ref
-    )
-    THEN RAISE(ABORT, 'parent import ref was not found')
-  END;
-  SELECT CASE
-    WHEN EXISTS (
+    );
+  SELECT RAISE(ABORT, 'cyclic parent refs')
+  WHERE EXISTS (
       WITH RECURSIVE ancestors(ref) AS (
         SELECT NEW.parent_import_ref
         UNION ALL
@@ -57,7 +51,5 @@ BEGIN
           AND trim(parent.parent_import_ref) <> ''
       )
       SELECT 1 FROM ancestors WHERE ref = NEW.import_ref
-    )
-    THEN RAISE(ABORT, 'cyclic parent refs')
-  END;
+    );
 END;
