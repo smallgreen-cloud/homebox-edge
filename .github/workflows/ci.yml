@@ -30,6 +30,9 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
+      - name: Generate Worker bindings
+        run: npx wrangler types
+
       - name: Run unit and Worker integration tests
         run: npm test
 

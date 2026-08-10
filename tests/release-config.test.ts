@@ -11,6 +11,10 @@ describe("release quality gate", () => {
 
     expect(workflow).toContain("npm ci");
     expect(workflow).toContain("npm test");
+    const generatedBindings = workflow.indexOf("run: npx wrangler types\n");
+    const typecheck = workflow.indexOf("run: npm run typecheck");
+    expect(generatedBindings).toBeGreaterThan(-1);
+    expect(generatedBindings).toBeLessThan(typecheck);
     expect(workflow).toContain("npm run typecheck");
     expect(workflow).toContain("wrangler types --check");
     expect(workflow).toContain("npm run build");
