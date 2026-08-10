@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const auth = vi.hoisted(() => ({ authenticateWeb: vi.fn() }));
@@ -231,6 +234,8 @@ describe("web and HomeBox interchange API", () => {
     expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
     expect(response.headers.get("X-Frame-Options")).toBe("DENY");
     const request = vi.mocked(env.ASSETS.fetch).mock.calls[0]![0] as Request;
-    expect(request.url).toContain("asset-version=homebox-edge-v1");
+    const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+    const indexVersion = createHash("sha256").update(html).digest("hex").slice(0, 12);
+    expect(request.url).toContain(`asset-version=sha256-${indexVersion}`);
   });
 });

@@ -1,10 +1,15 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 import { describe, expect, it } from "vitest";
 
 describe("mobile-first household inventory UI", () => {
   it("provides login, inventory, create and HomeBox import surfaces", async () => {
-    const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+    const [html, script, styles] = await Promise.all([
+      readFile(new URL("../public/index.html", import.meta.url), "utf8"),
+      readFile(new URL("../public/app.js", import.meta.url), "utf8"),
+      readFile(new URL("../public/styles.css", import.meta.url), "utf8"),
+    ]);
     expect(html).toContain('id="login"');
     expect(html).toContain('id="inventory"');
     expect(html).toContain('id="assetGrid"');
@@ -14,8 +19,10 @@ describe("mobile-first household inventory UI", () => {
     expect(html).toContain('id="assetDialog"');
     expect(html).toContain('id="assetEditForm"');
     expect(html).toContain('id="keyList"');
-    expect(html).toContain('href="/styles.css?v=0.3.0"');
-    expect(html).toContain('src="/app.js?v=0.3.0"');
+    const scriptVersion = createHash("sha256").update(script).digest("hex").slice(0, 12);
+    const stylesVersion = createHash("sha256").update(styles).digest("hex").slice(0, 12);
+    expect(html).toContain(`href="/styles.css?v=${stylesVersion}"`);
+    expect(html).toContain(`src="/app.js?v=${scriptVersion}"`);
   });
 
   it("persists the owner session, supports file preview and uses accessible feedback", async () => {
