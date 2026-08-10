@@ -94,6 +94,8 @@ npx wrangler deploy
 
 正式操作必須依 [release runbook](docs/RELEASE.md) 先記錄 D1 Time Travel bookmark、檢查待套 migration，部署後再跑 health、owner API、MCP revoke 與瀏覽器 smoke test。部署後開啟 `/app`，輸入 `ADMIN_TOKEN`，再於「AI 與 MCP 連線」建立 Connector URL。完整 URL 含私人 key，視同密碼。
 
+需要限時測試登入時，可另外設定 `TEMP_ADMIN_TOKEN` 與 ISO 8601 格式的 `TEMP_ADMIN_TOKEN_EXPIRES_AT`。Worker 只會在到期時間前接受這組憑證，既有 `ADMIN_TOKEN` 不受影響；兩者都應以 `wrangler secret put` 互動輸入，不得寫入設定檔或版本庫。
+
 ## 資料聲明
 
 repo 內只有依 HomeBox 公開格式製作的合成測試資料，不含真實家庭資產、部署 ID、API key 或其他 secrets。

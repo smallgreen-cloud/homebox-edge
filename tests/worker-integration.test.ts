@@ -6,12 +6,17 @@ import { createTestHarness, type TestHarness } from "wrangler";
 import { parseHomeboxCsv } from "../src/compat/homebox-csv";
 
 const ADMIN_TOKEN = "integration-admin-token-Synthetic-for-testing-only";
+const TEMP_ADMIN_TOKEN = "temporary-admin-token-Synthetic-for-testing-only";
 
 const server: TestHarness = createTestHarness({
   workers: [
     {
       configPath: "./wrangler.jsonc",
-      secrets: { ADMIN_TOKEN },
+      secrets: {
+        ADMIN_TOKEN,
+        TEMP_ADMIN_TOKEN,
+        TEMP_ADMIN_TOKEN_EXPIRES_AT: "2099-01-01T00:00:00.000Z",
+      },
       vars: { PUBLIC_BASE_URL: "http://inventory.test" },
     },
   ],
@@ -61,6 +66,18 @@ async function createAsset(
 }
 
 describe("production-build Worker integration", () => {
+  it("accepts the separately configured temporary owner credential", async () => {
+    const response = await server.fetch("/api/me", {
+      headers: { Authorization: `Bearer ${TEMP_ADMIN_TOKEN}` },
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      authenticated: true,
+      owner: "owner",
+    });
+  });
+
   it("imports the public household example idempotently through real D1", async () => {
     const preview = await server.fetch("/api/homebox/preview", {
       method: "POST",

@@ -78,6 +78,11 @@ describe("web and HomeBox interchange API", () => {
     expect(await (await app.request("/api/assets", {}, env)).json()).toMatchObject({
       assets: [{ id: "asset_1" }],
     });
+    expect(auth.authenticateWeb).toHaveBeenCalledWith(expect.any(Request), {
+      adminToken: env.ADMIN_TOKEN,
+      temporaryAdminToken: undefined,
+      temporaryAdminTokenExpiresAt: undefined,
+    });
     await app.request("/api/assets?q=Laptop", {}, env);
     expect(storage.searchAssets).toHaveBeenCalledWith(env.DB, "owner", "Laptop", false);
 

@@ -121,15 +121,52 @@ describe("HomeBox Edge authentication", () => {
     expect(values.has(registryKey)).toBe(true);
   });
 
-  it("accepts only an exact owner bearer token", async () => {
+  it("accepts only an exact permanent owner bearer token", async () => {
     const valid = new Request("https://inventory.example/api/me", {
       headers: { Authorization: "Bearer exact-secret" },
     });
     const invalid = new Request("https://inventory.example/api/me", {
       headers: { Authorization: "Bearer wrong-secret" },
     });
-    await expect(authenticateWeb(valid, "exact-secret")).resolves.toMatchObject({ uid: "owner" });
-    await expect(authenticateWeb(invalid, "exact-secret")).resolves.toBeNull();
-    await expect(authenticateWeb(valid, undefined)).resolves.toBeNull();
+    await expect(
+      authenticateWeb(valid, { adminToken: "exact-secret" }),
+    ).resolves.toMatchObject({ uid: "owner" });
+    await expect(
+      authenticateWeb(invalid, { adminToken: "exact-secret" }),
+    ).resolves.toBeNull();
+    await expect(authenticateWeb(valid, {})).resolves.toBeNull();
+  });
+
+  it("accepts a temporary owner token only before its server-side expiry", async () => {
+    const temporary = new Request("https://inventory.example/api/me", {
+      headers: { Authorization: "Bearer seven-day-secret" },
+    });
+    const config = {
+      adminToken: "permanent-secret",
+      temporaryAdminToken: "seven-day-secret",
+      temporaryAdminTokenExpiresAt: "2026-08-17T12:00:00.000Z",
+    };
+
+    await expect(authenticateWeb(temporary, config, 1_786_967_999)).resolves.toMatchObject({
+      uid: "owner",
+    });
+    await expect(authenticateWeb(temporary, config, 1_786_968_000)).resolves.toBeNull();
+  });
+
+  it("ignores malformed temporary expiry without disabling the permanent token", async () => {
+    const permanent = new Request("https://inventory.example/api/me", {
+      headers: { Authorization: "Bearer permanent-secret" },
+    });
+    const temporary = new Request("https://inventory.example/api/me", {
+      headers: { Authorization: "Bearer seven-day-secret" },
+    });
+    const config = {
+      adminToken: "permanent-secret",
+      temporaryAdminToken: "seven-day-secret",
+      temporaryAdminTokenExpiresAt: "not-a-date",
+    };
+
+    await expect(authenticateWeb(permanent, config)).resolves.toMatchObject({ uid: "owner" });
+    await expect(authenticateWeb(temporary, config)).resolves.toBeNull();
   });
 });
