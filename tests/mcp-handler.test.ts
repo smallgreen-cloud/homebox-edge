@@ -9,8 +9,21 @@ vi.mock("../src/mcp/tools", () => tools);
 import { handleMcp } from "../src/mcp/handler";
 
 function environment(authenticated = true) {
+  const db = {
+    prepare: vi.fn(() => {
+      const statement = {
+        bind: vi.fn(() => statement),
+        first: vi.fn().mockResolvedValue(
+          authenticated
+            ? { uid: "owner", expires_at: Math.floor(Date.now() / 1000) + 3600 }
+            : null,
+        ),
+      };
+      return statement;
+    }),
+  };
   return {
-    DB: {} as D1Database,
+    DB: db as unknown as D1Database,
     PUBLIC_BASE_URL: "https://inventory.example",
     MCP_KEYS: {
       get: vi.fn().mockResolvedValue(
@@ -72,5 +85,32 @@ describe("Remote MCP handler", () => {
       environment(),
     );
     expect(await invalidRequest.json()).toMatchObject({ error: { code: -32600 } });
+
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    tools.callTool.mockRejectedValueOnce(new Error("D1 SQL and secret details"));
+    const failedTool = await handleMcp(
+      request("tools/call", { name: "search_assets", arguments: { query: "Laptop" } }),
+      environment(),
+    );
+    const failedBody = await failedTool.text();
+    expect(failedBody).toContain("Tool execution failed");
+    expect(failedBody).not.toContain("D1 SQL");
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
+  });
+
+  it("rejects an oversized transport body before JSON parsing", async () => {
+    const oversized = new Request("https://inventory.example/mcp", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer hi_test",
+        "Content-Type": "application/json",
+        "Content-Length": String(13 * 1024 * 1024),
+      },
+      body: "{}",
+    });
+
+    const response = await handleMcp(oversized, environment());
+    expect(response.status).toBe(413);
   });
 });

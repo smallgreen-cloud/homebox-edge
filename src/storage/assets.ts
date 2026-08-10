@@ -1,4 +1,5 @@
 import { HomeAssetSchema, type HomeAsset, type StoredHomeAsset } from "../core/asset";
+import { assertValidParentGraph, type ParentEdge } from "../core/parent-graph";
 
 interface AssetRow {
   id: string;
@@ -42,6 +43,12 @@ const INSERT_COLUMNS = `
 `;
 
 const INSERT_PLACEHOLDERS = Array.from({ length: 30 }, () => "?").join(", ");
+
+interface AssetRelationRow extends ParentEdge {
+  id: string;
+  import_ref: string | null;
+  parent_import_ref: string | null;
+}
 
 function optional(value: string | null): string | undefined {
   return value ?? undefined;
@@ -119,11 +126,46 @@ function bindValues(userId: string, asset: StoredHomeAsset): unknown[] {
   ];
 }
 
+function sortByParentDependency(assets: readonly HomeAsset[]): HomeAsset[] {
+  const byRef = new Map(
+    assets.flatMap((asset) => (asset.import_ref ? [[asset.import_ref, asset] as const] : [])),
+  );
+  const visited = new Set<HomeAsset>();
+  const ordered: HomeAsset[] = [];
+  const visit = (asset: HomeAsset): void => {
+    if (visited.has(asset)) return;
+    const parent = asset.parent_import_ref ? byRef.get(asset.parent_import_ref) : undefined;
+    if (parent) visit(parent);
+    visited.add(asset);
+    ordered.push(asset);
+  };
+  for (const asset of assets) visit(asset);
+  return ordered;
+}
+
+async function loadAssetRelations(
+  db: D1Database,
+  userId: string,
+): Promise<AssetRelationRow[]> {
+  const result = await db
+    .prepare(
+      `SELECT id, import_ref, parent_import_ref FROM assets
+       WHERE user_id = ?`,
+    )
+    .bind(userId)
+    .all<AssetRelationRow>();
+  return result.results;
+}
+
 export async function insertAsset(
   db: D1Database,
   userId: string,
   asset: StoredHomeAsset,
 ): Promise<void> {
+  if (asset.parent_import_ref) {
+    const relations = await loadAssetRelations(db, userId);
+    assertValidParentGraph([...relations, asset]);
+  }
   await db
     .prepare(`INSERT INTO assets (${INSERT_COLUMNS}) VALUES (${INSERT_PLACEHOLDERS})`)
     .bind(...bindValues(userId, asset))
@@ -140,27 +182,18 @@ export async function upsertImportedAssets(
   const assets = input.map((value) => HomeAssetSchema.parse(value));
   const refs = assets.flatMap((asset) => (asset.import_ref ? [asset.import_ref] : []));
   const inputRefs = new Set(refs);
-  const parentRefs = assets.flatMap((asset) =>
-    asset.parent_import_ref ? [asset.parent_import_ref] : [],
+  if (inputRefs.size !== refs.length) {
+    throw new Error("duplicate import refs in one import are not allowed");
+  }
+  const relations = await loadAssetRelations(db, userId);
+  const proposedRefs = new Set(refs);
+  const unchanged = relations.filter(
+    (row) => !row.import_ref || !proposedRefs.has(row.import_ref),
   );
-  const lookupRefs = [...new Set([...refs, ...parentRefs])];
-  const existing = new Set<string>();
-  for (let offset = 0; offset < lookupRefs.length; offset += 90) {
-    const chunk = lookupRefs.slice(offset, offset + 90);
-    const placeholders = chunk.map(() => "?").join(", ");
-    const result = await db
-      .prepare(
-        `SELECT import_ref FROM assets WHERE user_id = ? AND import_ref IN (${placeholders})`,
-      )
-      .bind(userId, ...chunk)
-      .all<{ import_ref: string }>();
-    for (const row of result.results) existing.add(row.import_ref);
-  }
-  for (const parentRef of parentRefs) {
-    if (!inputRefs.has(parentRef) && !existing.has(parentRef)) {
-      throw new Error(`parent import ref ${JSON.stringify(parentRef)} was not found`);
-    }
-  }
+  assertValidParentGraph([...unchanged, ...assets]);
+  const existing = new Set(
+    relations.flatMap((row) => (row.import_ref ? [row.import_ref] : [])),
+  );
 
   const sql = `INSERT INTO assets (${INSERT_COLUMNS}) VALUES (${INSERT_PLACEHOLDERS})
     ON CONFLICT(user_id, import_ref) WHERE import_ref IS NOT NULL AND import_ref <> ''
@@ -192,7 +225,7 @@ export async function upsertImportedAssets(
       custom_fields_json = excluded.custom_fields_json,
       updated_at = excluded.updated_at`;
 
-  const statements = assets.map((asset) => {
+  const statements = sortByParentDependency(assets).map((asset) => {
     const stored: StoredHomeAsset = {
       ...asset,
       id: `asset_${crypto.randomUUID()}`,
@@ -201,9 +234,9 @@ export async function upsertImportedAssets(
     };
     return db.prepare(sql).bind(...bindValues(userId, stored));
   });
-  for (let offset = 0; offset < statements.length; offset += 100) {
-    await db.batch(statements.slice(offset, offset + 100));
-  }
+  // D1 guarantees that one batch is one transaction. Splitting this array
+  // would allow an error in a later chunk to leave earlier rows committed.
+  await db.batch(statements);
   const updated = assets.filter((asset) => asset.import_ref && existing.has(asset.import_ref)).length;
   return { created: assets.length - updated, updated };
 }
@@ -236,12 +269,16 @@ export async function listAssets(
   return result.results.map(rowToAsset);
 }
 
-function toFtsQuery(query: string): string {
+function searchTokens(query: string): string[] {
   return query
     .split(/\s+/)
     .map((token) => token.replaceAll('"', '""').trim())
     .filter(Boolean)
-    .slice(0, 10)
+    .slice(0, 10);
+}
+
+function toFtsQuery(query: string): string {
+  return searchTokens(query)
     .map((token) => `"${token}"*`)
     .join(" OR ");
 }
@@ -252,8 +289,31 @@ export async function searchAssets(
   query: string,
   includeArchived = false,
 ): Promise<StoredHomeAsset[]> {
+  const tokens = searchTokens(query);
+  if (tokens.length === 0) return [];
+  const containsCjk = tokens.some((token) => /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/.test(token));
+  if (containsCjk) {
+    const archivedClause = includeArchived ? "" : "AND a.archived = 0";
+    const searchableText = `lower(
+      COALESCE(a.name, '') || char(10) || COALESCE(a.asset_id, '') || char(10) ||
+      COALESCE(a.description, '') || char(10) || COALESCE(a.notes, '') || char(10) ||
+      COALESCE(a.manufacturer, '') || char(10) || COALESCE(a.model_number, '') || char(10) ||
+      COALESCE(a.serial_number, '') || char(10) || COALESCE(a.location_json, '') || char(10) ||
+      COALESCE(a.tags_json, '') || char(10) || COALESCE(a.custom_fields_json, '')
+    )`;
+    const tokenClauses = tokens.map(() => `instr(${searchableText}, lower(?)) > 0`).join(" OR ");
+    const result = await db
+      .prepare(
+        `SELECT a.* FROM assets a
+         WHERE a.user_id = ? ${archivedClause} AND (${tokenClauses})
+         ORDER BY a.updated_at DESC LIMIT 100`,
+      )
+      .bind(userId, ...tokens)
+      .all<AssetRow>();
+    return result.results.map(rowToAsset);
+  }
+
   const fts = toFtsQuery(query);
-  if (!fts) return [];
   const archivedClause = includeArchived ? "" : "AND a.archived = 0";
   const result = await db
     .prepare(
@@ -307,6 +367,19 @@ export async function updateAsset(
   };
   const entries = Object.entries(allowed).filter(([, value]) => value !== undefined);
   if (entries.length === 0) return false;
+  if (patch.import_ref !== undefined || patch.parent_import_ref !== undefined) {
+    const relations = await loadAssetRelations(db, userId);
+    const target = relations.find((row) => row.id === assetId);
+    if (!target) return false;
+    const proposed: AssetRelationRow = {
+      ...target,
+      import_ref: patch.import_ref ?? target.import_ref,
+      parent_import_ref: patch.parent_import_ref ?? target.parent_import_ref,
+    };
+    assertValidParentGraph(
+      relations.map((row) => (row.id === assetId ? proposed : row)),
+    );
+  }
   const assignments = entries.map(([column]) => `${column} = ?`).join(", ");
   const result = await db
     .prepare(`UPDATE assets SET ${assignments}, updated_at = ? WHERE user_id = ? AND id = ?`)

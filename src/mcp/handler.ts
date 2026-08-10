@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import { authenticateMcp } from "../auth";
+import { PayloadTooLargeError, PublicHttpError } from "../errors";
+import { MAX_CSV_REQUEST_BYTES, readJsonBody } from "../http/body";
 import { callTool, TOOL_DEFINITIONS } from "./tools";
 
 type McpEnv = {
@@ -39,13 +41,16 @@ function jsonRpc(
 }
 
 export async function handleMcp(request: Request, env: McpEnv): Promise<Response> {
-  const identity = await authenticateMcp(request, env.MCP_KEYS);
+  const identity = await authenticateMcp(request, env.DB, env.MCP_KEYS);
   if (!identity) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   let value: unknown;
   try {
-    value = await request.json();
-  } catch {
+    value = await readJsonBody(request, MAX_CSV_REQUEST_BYTES);
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) {
+      return Response.json({ error: error.message }, { status: error.status });
+    }
     return jsonRpc(undefined, undefined, { code: -32700, message: "Parse error" });
   }
   const parsed = JsonRpcRequestSchema.safeParse(value);
@@ -79,7 +84,21 @@ export async function handleMcp(request: Request, env: McpEnv): Promise<Response
         content: [{ type: "text", text: JSON.stringify(value, null, 2) }],
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown tool error";
+      let message: string;
+      if (error instanceof PublicHttpError) {
+        message = error.message;
+      } else if (error instanceof z.ZodError) {
+        message = "Invalid tool arguments";
+      } else {
+        console.error(
+          JSON.stringify({
+            message: "MCP tool execution failed",
+            tool: params.data.name,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
+        message = "Tool execution failed";
+      }
       return jsonRpc(rpc.id, {
         isError: true,
         content: [{ type: "text", text: message }],
