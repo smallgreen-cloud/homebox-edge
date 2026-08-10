@@ -22,4 +22,14 @@ describe("release quality gate", () => {
     expect(workflow).toContain("if: failure()");
     expect(workflow).toContain("issues: write");
   });
+
+  it("keeps remote D1 trigger migrations free of nested CASE blocks", async () => {
+    const migration = await readFile(
+      new URL("../migrations/0003_asset_parent_invariants.sql", import.meta.url),
+      "utf8",
+    );
+
+    expect(migration.match(/CREATE TRIGGER/g)).toHaveLength(3);
+    expect(migration).not.toMatch(/\bCASE\b/i);
+  });
 });
