@@ -6,6 +6,12 @@ export interface TokenIdentity {
   expires_at?: number;
 }
 
+export interface WebAuthConfig {
+  adminToken?: string;
+  temporaryAdminToken?: string;
+  temporaryAdminTokenExpiresAt?: string;
+}
+
 export function extractMcpToken(request: Request): string {
   const authorization = request.headers.get("Authorization");
   if (authorization?.startsWith("Bearer ")) return authorization.slice(7);
@@ -114,28 +120,47 @@ async function digest(value: string): Promise<ArrayBuffer> {
 
 export async function authenticateWeb(
   request: Request,
-  adminToken: string | undefined,
+  config: WebAuthConfig,
+  nowSeconds = Math.floor(Date.now() / 1_000),
 ): Promise<{ uid: "owner"; email: "owner" } | null> {
   const authorization = request.headers.get("Authorization");
+  if (!authorization?.startsWith("Bearer ")) return null;
+
+  const expectedTokens = [config.adminToken].filter(
+    (token): token is string => typeof token === "string" && token.length > 0,
+  );
+  const temporaryExpiryMilliseconds = Date.parse(
+    config.temporaryAdminTokenExpiresAt ?? "",
+  );
+  const temporaryExpirySeconds = Number.isFinite(temporaryExpiryMilliseconds)
+    ? Math.floor(temporaryExpiryMilliseconds / 1_000)
+    : null;
   if (
-    !authorization?.startsWith("Bearer ") ||
-    typeof adminToken !== "string" ||
-    adminToken.length === 0
+    typeof config.temporaryAdminToken === "string" &&
+    config.temporaryAdminToken.length > 0 &&
+    temporaryExpirySeconds !== null &&
+    temporaryExpirySeconds > nowSeconds
   ) {
-    return null;
+    expectedTokens.push(config.temporaryAdminToken);
   }
-  const [supplied, expected] = await Promise.all([
+  if (expectedTokens.length === 0) return null;
+
+  const [supplied, ...expectedDigests] = await Promise.all([
     digest(authorization.slice(7)),
-    digest(adminToken),
+    ...expectedTokens.map(digest),
   ]);
   // Both digests have the same fixed length. A full XOR pass avoids the
   // length and early-return timing leaks of direct string comparison, while
   // also running in Node's Web Crypto test runtime.
   const left = new Uint8Array(supplied);
-  const right = new Uint8Array(expected);
-  let difference = 0;
-  for (let index = 0; index < left.length; index += 1) {
-    difference |= left[index]! ^ right[index]!;
+  let matched = 0;
+  for (const expected of expectedDigests) {
+    const right = new Uint8Array(expected);
+    let difference = 0;
+    for (let index = 0; index < left.length; index += 1) {
+      difference |= left[index]! ^ right[index]!;
+    }
+    matched |= Number(difference === 0);
   }
-  return difference === 0 ? { uid: "owner", email: "owner" } : null;
+  return matched === 1 ? { uid: "owner", email: "owner" } : null;
 }

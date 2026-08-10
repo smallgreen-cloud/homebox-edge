@@ -22,7 +22,11 @@ import {
   upsertImportedAssets,
 } from "./storage/assets";
 
-type RuntimeEnv = Env & { ADMIN_TOKEN?: string };
+type RuntimeEnv = Env & {
+  ADMIN_TOKEN?: string;
+  TEMP_ADMIN_TOKEN?: string;
+  TEMP_ADMIN_TOKEN_EXPIRES_AT?: string;
+};
 type Variables = { ownerId: string };
 
 const app = new Hono<{ Bindings: RuntimeEnv; Variables: Variables }>();
@@ -58,9 +62,13 @@ const SECURITY_HEADERS = {
 
 async function requireOwner(
   request: Request,
-  adminToken: string | undefined,
+  env: RuntimeEnv,
 ): Promise<{ uid: string; email: string } | null> {
-  return authenticateWeb(request, adminToken);
+  return authenticateWeb(request, {
+    adminToken: env.ADMIN_TOKEN,
+    temporaryAdminToken: env.TEMP_ADMIN_TOKEN,
+    temporaryAdminTokenExpiresAt: env.TEMP_ADMIN_TOKEN_EXPIRES_AT,
+  });
 }
 
 app.use("*", async (context, next) => {
@@ -99,7 +107,7 @@ app.post("/mcp", (context) => handleMcp(context.req.raw, context.env));
 app.get("/mcp", (context) => context.body(null, 405, { Allow: "POST" }));
 
 app.use("/api/*", async (context, next) => {
-  const owner = await requireOwner(context.req.raw, context.env.ADMIN_TOKEN);
+  const owner = await requireOwner(context.req.raw, context.env);
   if (!owner) return context.json({ error: "Unauthorized" }, 401);
   context.set("ownerId", owner.uid);
   await next();
