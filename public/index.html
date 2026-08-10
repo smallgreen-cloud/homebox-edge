@@ -4,106 +4,126 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#243c31">
-    <title>HomeBox Edge｜家庭資產台帳</title>
-    <link rel="stylesheet" href="/styles.css?v=0.1.0">
+    <title>HomeBox Edge｜家庭資產管理</title>
+    <link rel="stylesheet" href="/styles.css?v=0.3.0">
   </head>
   <body>
-    <a class="skip-link" href="#main-content">跳到資產清單</a>
-    <div class="top-rule" aria-hidden="true"><span>HOME / INVENTORY / 01</span></div>
+    <a class="skip-link" href="#main-content" data-i18n="skipToAssets">跳到資產清單</a>
+    <div class="top-rule" aria-hidden="true"><span>HOMEBOX EDGE / PRIVATE HOUSEHOLD INVENTORY</span></div>
 
     <header class="masthead">
-      <a class="wordmark" href="/" aria-label="HomeBox Edge 首頁">
+      <a class="wordmark" href="/" aria-label="HomeBox Edge 首頁" data-i18n-aria-label="homeboxHome">
         <span class="wordmark-mark">H<span>B</span></span>
         <span>HomeBox<br>Edge</span>
       </a>
-      <div class="masthead-note">一份跟著你走的家庭資產台帳<br><strong>HomeBox v0.26.2 CSV compatible</strong></div>
-      <button id="logoutButton" class="text-button" type="button" hidden>鎖定台帳</button>
+      <div class="masthead-note" data-i18n-label="mastheadNote">一份跟著你走的家庭資產清單<br><strong>HomeBox v0.26.2 CSV compatible</strong></div>
+      <div class="masthead-actions">
+        <button id="languageButton" class="language-button" type="button" aria-label="Switch to English">EN</button>
+        <button id="logoutButton" class="text-button" type="button" data-i18n="lockData" hidden>鎖定資料</button>
+      </div>
     </header>
 
     <main id="main-content">
       <section id="login" class="login-stage" aria-labelledby="loginTitle">
         <div class="login-copy">
-          <p class="eyebrow">PRIVATE LEDGER</p>
-          <h1 id="loginTitle">房子會變，<br>物件要有跡可循。</h1>
-          <p>登入後從手機盤點、搜尋與補記；需要搬家時，用 HomeBox CSV 帶走。</p>
+          <p class="eyebrow">PRIVATE INVENTORY</p>
+          <h1 id="loginTitle"><span data-i18n="loginTitleLine1">房子會變，</span><br><span data-i18n="loginTitleLine2">物件要有跡可循。</span></h1>
+          <p data-i18n="loginIntro">登入後從手機盤點、搜尋與補記；需要搬家時，用 HomeBox CSV 帶走。</p>
         </div>
         <form id="loginForm" class="login-form">
-          <label for="adminToken">管理憑證</label>
+          <label for="adminToken" data-i18n="adminCredential">管理憑證</label>
           <input id="adminToken" name="adminToken" type="password" autocomplete="current-password" required>
-          <button class="primary-button" type="submit">開啟家庭台帳</button>
-          <p class="field-note">憑證只保存在這台裝置的瀏覽器。</p>
+          <button class="primary-button" type="submit" data-i18n="openAssetList">開啟資產清單</button>
+          <p class="field-note" data-i18n="credentialNote">憑證只保存在這台裝置的瀏覽器。</p>
         </form>
       </section>
 
       <section id="inventory" class="inventory" hidden>
-        <div class="inventory-rail" aria-label="資產摘要">
-          <p class="eyebrow">ACTIVE INDEX</p>
-          <p><strong id="assetCount">0</strong><span id="assetCountLabel">件未封存資產</span></p>
-          <p class="compat-stamp">HB<br><span>0.26.2</span></p>
+        <div class="inventory-rail" aria-label="資產摘要" data-i18n-aria-label="assetSummary">
+          <div>
+            <p class="eyebrow" data-i18n="assetOverview">資產概況</p>
+            <p class="asset-total"><strong id="assetCount">—</strong><span id="assetCountLabel">正在載入資產</span></p>
+          </div>
+          <a class="rail-link" href="#assetListTitle" data-i18n-label="viewAssetList">查看資產清單 <span>↓</span></a>
+          <p class="compat-stamp"><span>HomeBox</span><br>v0.26.2 compatible</p>
         </div>
 
         <div class="inventory-main">
           <div class="inventory-heading">
             <div>
-              <p class="eyebrow">HOUSEHOLD ASSETS</p>
-              <h1>家中物件</h1>
+              <p class="eyebrow">HOMEBOX EDGE</p>
+              <h1 data-i18n="familyAssets">家庭資產</h1>
+              <p class="inventory-intro" data-i18n="inventoryIntro">搜尋、盤點與維護家中重要物件。</p>
             </div>
             <div class="heading-actions">
-              <button id="exportButton" class="secondary-button" type="button">匯出 HomeBox CSV</button>
+              <button id="openCreateButton" class="primary-button" type="button" data-i18n="addAssetCta">＋ 新增資產</button>
+              <button id="exportButton" class="secondary-button" type="button" data-i18n="exportCsv">匯出 CSV</button>
             </div>
           </div>
 
           <form id="searchForm" class="search-line" role="search">
-            <label class="sr-only" for="searchInput">搜尋資產</label>
-            <input id="searchInput" name="q" type="search" placeholder="搜尋名稱、位置、品牌、序號或標籤">
-            <button type="submit" aria-label="搜尋資產">搜尋</button>
+            <label class="sr-only" for="searchInput" data-i18n="searchAssets">搜尋資產</label>
+            <input id="searchInput" name="q" type="search" placeholder="搜尋名稱、位置、品牌、序號或標籤" data-i18n-placeholder="searchPlaceholder">
+            <button type="submit" aria-label="搜尋資產" data-i18n="search" data-i18n-aria-label="searchAssets">搜尋</button>
           </form>
-          <label class="archive-filter" for="includeArchived">
+          <label class="archive-filter" for="includeArchived" data-i18n-label="showArchived">
             <input id="includeArchived" type="checkbox">
             同時顯示已封存資產
           </label>
 
-          <div class="workbench">
-            <details class="workbench-section" open>
-              <summary>新增一件資產 <span>＋</span></summary>
+          <section class="asset-section" aria-labelledby="assetListTitle">
+            <div class="section-label">
+              <div>
+                <p class="eyebrow">ASSET REGISTER</p>
+                <h2 id="assetListTitle" data-i18n="assetList">資產清單</h2>
+              </div>
+              <button id="clearSearchButton" class="text-button" type="button" data-i18n="clearSearch" hidden>清除搜尋</button>
+            </div>
+            <div id="assetGrid" class="asset-grid" aria-live="polite"></div>
+          </section>
+
+          <section class="tool-section" aria-labelledby="toolSectionTitle">
+            <div class="tool-heading">
+              <div>
+                <p class="eyebrow">MANAGEMENT TOOLS</p>
+                <h2 id="toolSectionTitle" data-i18n="managementTools">管理工具</h2>
+              </div>
+              <p data-i18n="toolIntro">需要新增、搬移資料或連接 AI 時再展開。</p>
+            </div>
+            <div class="workbench">
+            <details id="createPanel" class="workbench-section">
+              <summary data-i18n-label="addOneAsset">新增一件資產 <span>＋</span></summary>
               <form id="assetForm" class="asset-form">
-                <label>名稱<input name="name" required maxlength="255" placeholder="例如：客廳除濕機"></label>
-                <label>位置路徑<input name="location" placeholder="家 / 客廳 / 電視櫃"></label>
-                <label>標籤<input name="tags" placeholder="家電；保固中"></label>
-                <label>數量<input name="quantity" type="number" min="0" step="0.01" value="1"></label>
-                <label class="wide">備註<textarea name="notes" rows="2" placeholder="購買來源、收納方式或家人需要知道的事"></textarea></label>
-                <button class="primary-button" type="submit">加入台帳</button>
+                <label data-i18n-label="name">名稱<input name="name" required maxlength="255" placeholder="例如：客廳除濕機" data-i18n-placeholder="namePlaceholder"></label>
+                <label data-i18n-label="locationPath">位置路徑<input name="location" placeholder="家 / 客廳 / 電視櫃" data-i18n-placeholder="locationPlaceholder"></label>
+                <label data-i18n-label="tags">標籤<input name="tags" placeholder="家電；保固中" data-i18n-placeholder="tagsPlaceholder"></label>
+                <label data-i18n-label="quantity">數量<input name="quantity" type="number" min="0" step="0.01" value="1"></label>
+                <label class="wide" data-i18n-label="notes">備註<textarea name="notes" rows="2" placeholder="購買來源、收納方式或家人需要知道的事" data-i18n-placeholder="notesPlaceholder"></textarea></label>
+                <button class="primary-button" type="submit" data-i18n="addAsset">新增資產</button>
               </form>
             </details>
 
             <details id="importPanel" class="workbench-section">
-              <summary>從 HomeBox 匯入 <span>↧</span></summary>
+              <summary data-i18n-label="importHomebox">匯入 HomeBox 檔案 <span>↧</span></summary>
               <div class="import-flow">
-                <label for="csvFile">選擇 CSV 或 TSV</label>
+                <label for="csvFile" data-i18n="chooseFile">選擇 CSV 或 TSV</label>
                 <input id="csvFile" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values">
-                <button id="previewImportButton" class="secondary-button" type="button">先檢查檔案</button>
+                <button id="previewImportButton" class="secondary-button" type="button" data-i18n="checkFile">先檢查檔案</button>
                 <div id="importPreview" class="import-preview" aria-live="polite"></div>
-                <button id="confirmImportButton" class="primary-button" type="button" hidden>確認匯入這批資產</button>
+                <button id="confirmImportButton" class="primary-button" type="button" data-i18n="confirmImport" hidden>確認匯入這批資產</button>
               </div>
             </details>
 
             <details class="workbench-section">
-              <summary>連接 AI 工具 <span>⌁</span></summary>
+              <summary data-i18n-label="aiAndMcp">AI 與 MCP 連線 <span>⌁</span></summary>
               <div class="key-flow">
-                <p>建立可隨時撤銷的 Remote MCP Connector URL。</p>
-                <button id="createKeyButton" class="secondary-button" type="button">建立 MCP 連線</button>
+                <p data-i18n="mcpIntro">建立可隨時撤銷的 Remote MCP Connector URL。</p>
+                <button id="createKeyButton" class="secondary-button" type="button" data-i18n="createMcpConnection">建立 MCP 連線</button>
                 <output id="connectorOutput" aria-live="polite"></output>
                 <div id="keyList" class="key-list" aria-live="polite"></div>
               </div>
             </details>
-          </div>
-
-          <section class="asset-section" aria-labelledby="assetListTitle">
-            <div class="section-label">
-              <h2 id="assetListTitle">資產索引</h2>
-              <button id="clearSearchButton" class="text-button" type="button" hidden>清除搜尋</button>
             </div>
-            <div id="assetGrid" class="asset-grid" aria-live="polite"></div>
           </section>
         </div>
       </section>
@@ -113,32 +133,32 @@
       <div class="dialog-heading">
         <div>
           <p class="eyebrow">ASSET RECORD</p>
-          <h2 id="assetDialogTitle">資產詳情</h2>
+          <h2 id="assetDialogTitle" data-i18n="assetDetails">資產詳情</h2>
         </div>
-        <button id="closeAssetDialog" class="text-button" type="button" aria-label="關閉資產詳情">關閉</button>
+        <button id="closeAssetDialog" class="text-button" type="button" aria-label="關閉資產詳情" data-i18n="close" data-i18n-aria-label="closeAssetDetails">關閉</button>
       </div>
       <form id="assetEditForm" class="asset-edit-form">
         <input name="id" type="hidden">
-        <label>名稱<input name="name" required maxlength="255"></label>
-        <label>資產編號<input name="asset_id" pattern="[0-9]{3}-[0-9]{3,}" placeholder="000-123"></label>
-        <label>位置路徑<input name="location" placeholder="家 / 客廳 / 電視櫃"></label>
-        <label>標籤<input name="tags" placeholder="家電；保固中"></label>
-        <label>數量<input name="quantity" type="number" step="any" required></label>
-        <label>品牌<input name="manufacturer" maxlength="255"></label>
-        <label>型號<input name="model_number" maxlength="255"></label>
-        <label>序號<input name="serial_number" maxlength="255"></label>
-        <label>購買價格<input name="purchase_price" type="number" step="any"></label>
-        <label class="wide">備註<textarea name="notes" rows="3" maxlength="1000"></textarea></label>
-        <label class="check-field"><input name="insured" type="checkbox"> 已投保</label>
-        <label class="check-field"><input name="lifetime_warranty" type="checkbox"> 終身保固</label>
+        <label data-i18n-label="name">名稱<input name="name" required maxlength="255"></label>
+        <label data-i18n-label="assetId">資產編號<input name="asset_id" pattern="[0-9]{3}-[0-9]{3,}" placeholder="000-123"></label>
+        <label data-i18n-label="locationPath">位置路徑<input name="location" placeholder="家 / 客廳 / 電視櫃" data-i18n-placeholder="locationPlaceholder"></label>
+        <label data-i18n-label="tags">標籤<input name="tags" placeholder="家電；保固中" data-i18n-placeholder="tagsPlaceholder"></label>
+        <label data-i18n-label="quantity">數量<input name="quantity" type="number" step="any" required></label>
+        <label data-i18n-label="manufacturer">品牌<input name="manufacturer" maxlength="255"></label>
+        <label data-i18n-label="modelNumber">型號<input name="model_number" maxlength="255"></label>
+        <label data-i18n-label="serialNumber">序號<input name="serial_number" maxlength="255"></label>
+        <label data-i18n-label="purchasePrice">購買價格<input name="purchase_price" type="number" step="any"></label>
+        <label class="wide" data-i18n-label="notes">備註<textarea name="notes" rows="3" maxlength="1000"></textarea></label>
+        <label class="check-field" data-i18n-label="insured"><input name="insured" type="checkbox"> 已投保</label>
+        <label class="check-field" data-i18n-label="lifetimeWarranty"><input name="lifetime_warranty" type="checkbox"> 終身保固</label>
         <div class="dialog-actions wide">
-          <button id="cancelAssetEdit" class="secondary-button" type="button">取消</button>
-          <button class="primary-button" type="submit">儲存變更</button>
+          <button id="cancelAssetEdit" class="secondary-button" type="button" data-i18n="cancel">取消</button>
+          <button class="primary-button" type="submit" data-i18n="saveChanges">儲存變更</button>
         </div>
       </form>
     </dialog>
 
     <div id="status" class="status" role="status" aria-live="polite"></div>
-    <script type="module" src="/app.js?v=0.1.0"></script>
+    <script type="module" src="/app.js?v=0.3.0"></script>
   </body>
 </html>

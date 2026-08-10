@@ -6,6 +6,7 @@ import {
   HomeAssetSchema,
   type StoredHomeAsset,
 } from "../core/asset";
+import { InvalidRequestError, NotFoundError } from "../errors";
 import {
   archiveAsset,
   getAsset,
@@ -113,19 +114,19 @@ export async function callTool(
   if (name === "get_asset") {
     const { asset_id: id } = AssetIdSchema.parse(args);
     const asset = await getAsset(env.DB, userId, id);
-    if (!asset) throw new Error("asset not found");
+    if (!asset) throw new NotFoundError("asset not found");
     return publicAsset(env, asset);
   }
   if (name === "update_asset") {
     const { asset_id: id, patch } = UpdateSchema.parse(args);
     const changed = await updateAsset(env.DB, userId, id, patch, new Date().toISOString());
-    if (!changed) throw new Error("asset not found or patch is empty");
+    if (!changed) throw new NotFoundError("asset not found or patch is empty");
     return { id, updated: true };
   }
   if (name === "archive_asset") {
     const { asset_id: id } = AssetIdSchema.parse(args);
     const archived = await archiveAsset(env.DB, userId, id, new Date().toISOString());
-    if (!archived) throw new Error("asset not found or already archived");
+    if (!archived) throw new NotFoundError("asset not found or already archived");
     return { id, archived: true };
   }
   if (name === "preview_homebox_csv") {
@@ -153,5 +154,5 @@ export async function callTool(
     const assets = await listAssets(env.DB, userId, true);
     return { format: "homebox.csv", count: assets.length, content: renderHomeboxCsv(assets) };
   }
-  throw new Error(`unknown tool: ${name}`);
+  throw new InvalidRequestError(`unknown tool: ${name}`);
 }

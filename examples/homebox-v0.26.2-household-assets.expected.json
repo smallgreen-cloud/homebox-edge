@@ -1,0 +1,41 @@
+{
+  "format": "HomeBox v0.26.2 item CSV",
+  "upstream_release": "v0.26.2",
+  "upstream_commit": "e01dd737238a3fa7e1a6454b37de6c6fc88c86e4",
+  "data_classification": "Synthetic for testing only",
+  "asset_count": 24,
+  "active_count": 23,
+  "archived_count": 1,
+  "custom_fields": [
+    "Color",
+    "Currency",
+    "Energy_Rating",
+    "Maintenance_Interval",
+    "Power_W",
+    "Voltage"
+  ],
+  "parent_relationships": {
+    "demo-monitor": "demo-desktop",
+    "demo-backup-drive": "demo-desktop",
+    "demo-camera": "demo-camera-bag",
+    "demo-lens": "demo-camera-bag",
+    "demo-torque-wrench": "demo-toolbox",
+    "demo-power-tools": "demo-toolbox"
+  },
+  "first_import_into_empty_owner": {
+    "imported": 24,
+    "created": 24,
+    "updated": 0
+  },
+  "idempotent_replay": {
+    "imported": 24,
+    "created": 0,
+    "updated": 24
+  },
+  "search_checks": {
+    "Wi-Fi": "demo-wifi-router",
+    "外接螢幕": "demo-monitor",
+    "咖啡": "demo-coffee-machine",
+    "已汰換": "demo-retired-tablet"
+  }
+}

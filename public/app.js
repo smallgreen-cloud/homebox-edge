@@ -1,7 +1,211 @@
 const byId = (id) => document.getElementById(id);
 
+const COPY = {
+  "zh-Hant": {
+    documentTitle: "HomeBox Edge｜家庭資產管理",
+    skipToAssets: "跳到資產清單",
+    mastheadNote: "一份跟著你走的家庭資產清單",
+    homeboxHome: "HomeBox Edge 首頁",
+    lockData: "鎖定資料",
+    loginTitleLine1: "房子會變，",
+    loginTitleLine2: "物件要有跡可循。",
+    loginIntro: "登入後從手機盤點、搜尋與補記；需要搬家時，用 HomeBox CSV 帶走。",
+    adminCredential: "管理憑證",
+    openAssetList: "開啟資產清單",
+    credentialNote: "憑證只保存在這台裝置的瀏覽器。",
+    assetSummary: "資產摘要",
+    assetOverview: "資產概況",
+    viewAssetList: "查看資產清單",
+    familyAssets: "家庭資產",
+    inventoryIntro: "搜尋、盤點與維護家中重要物件。",
+    addAssetCta: "＋ 新增資產",
+    exportCsv: "匯出 CSV",
+    searchAssets: "搜尋資產",
+    searchPlaceholder: "搜尋名稱、位置、品牌、序號或標籤",
+    search: "搜尋",
+    showArchived: "同時顯示已封存資產",
+    assetList: "資產清單",
+    clearSearch: "清除搜尋",
+    managementTools: "管理工具",
+    toolIntro: "需要新增、搬移資料或連接 AI 時再展開。",
+    addOneAsset: "新增一件資產",
+    name: "名稱",
+    namePlaceholder: "例如：客廳除濕機",
+    locationPath: "位置路徑",
+    locationPlaceholder: "家 / 客廳 / 電視櫃",
+    tags: "標籤",
+    tagsPlaceholder: "家電；保固中",
+    quantity: "數量",
+    notes: "備註",
+    notesPlaceholder: "購買來源、收納方式或家人需要知道的事",
+    addAsset: "新增資產",
+    importHomebox: "匯入 HomeBox 檔案",
+    chooseFile: "選擇 CSV 或 TSV",
+    checkFile: "先檢查檔案",
+    confirmImport: "確認匯入這批資產",
+    aiAndMcp: "AI 與 MCP 連線",
+    mcpIntro: "建立可隨時撤銷的 Remote MCP Connector URL。",
+    createMcpConnection: "建立 MCP 連線",
+    assetDetails: "資產詳情",
+    close: "關閉",
+    closeAssetDetails: "關閉資產詳情",
+    assetId: "資產編號",
+    manufacturer: "品牌",
+    modelNumber: "型號",
+    serialNumber: "序號",
+    purchasePrice: "購買價格",
+    insured: "已投保",
+    lifetimeWarranty: "終身保固",
+    cancel: "取消",
+    saveChanges: "儲存變更",
+    requestFailed: "請求失敗（{status}）",
+    noLocation: "尚未指定位置",
+    loadingAssets: "正在載入資產",
+    assetCountShown: "件目前顯示資產",
+    assetCountActive: "件未封存資產",
+    emptyTitle: "還沒有資產",
+    emptyCopy: "先記下一件常找不到、需要保固，或搬家時不想遺漏的物件。",
+    quantityValue: "數量 {value}",
+    archived: "已封存",
+    insuredBadge: "已投保",
+    lifetimeWarrantyBadge: "終身保固",
+    warrantyUntil: "保固至 {date}",
+    openRecord: "開啟紀錄",
+    more: "更多",
+    restoreToList: "還原至資產清單",
+    archive: "封存",
+    checkingCredential: "正在核對憑證…",
+    inventoryOpened: "資產清單已開啟",
+    invalidCredential: "憑證無法使用，請重新確認。",
+    addingAsset: "正在新增資產…",
+    assetAdded: "資產已新增",
+    restoring: "正在還原…",
+    archiving: "正在封存…",
+    assetRestored: "資產已還原至資產清單",
+    assetArchived: "資產已封存，仍會保留在 HomeBox CSV 匯出中",
+    saving: "正在儲存…",
+    assetUpdated: "資產資料已更新",
+    selectFile: "請先選擇 HomeBox CSV 或 TSV 檔案。",
+    fileTooLarge: "檔案超過 5 MB。請拆成較小的 HomeBox CSV 再匯入。",
+    checkingFormat: "正在檢查格式…",
+    formatPassed: "格式通過：共 {count} 筆，以下顯示前 {sample} 筆。",
+    importingAssets: "正在匯入資產…",
+    importCompleted: "匯入完成：新增 {created} 筆、更新 {updated} 筆",
+    preparingCsv: "正在整理 CSV…",
+    csvDownloaded: "HomeBox CSV 已下載",
+    noMcp: "目前沒有有效的 MCP 連線。",
+    validUntil: "有效至 {date}",
+    revoke: "撤銷",
+    revoking: "撤銷中…",
+    mcpRevoked: "MCP 連線已撤銷",
+    creatingConnection: "正在建立連線…",
+    mcpCreated: "MCP Connector URL 已建立；請把它當作密碼保管。",
+  },
+  en: {
+    documentTitle: "HomeBox Edge | Household Inventory",
+    skipToAssets: "Skip to asset list",
+    mastheadNote: "A household inventory that moves with you",
+    homeboxHome: "HomeBox Edge home",
+    lockData: "Lock data",
+    loginTitleLine1: "Homes change.",
+    loginTitleLine2: "Keep every item accounted for.",
+    loginIntro: "Sign in to inventory, search, and update items from your phone. Take everything with you as a HomeBox CSV when you move.",
+    adminCredential: "Admin credential",
+    openAssetList: "Open asset list",
+    credentialNote: "Your credential stays in this browser on this device.",
+    assetSummary: "Asset summary",
+    assetOverview: "Asset overview",
+    viewAssetList: "View asset list",
+    familyAssets: "Household Assets",
+    inventoryIntro: "Search, inventory, and maintain the important items in your home.",
+    addAssetCta: "+ Add asset",
+    exportCsv: "Export CSV",
+    searchAssets: "Search assets",
+    searchPlaceholder: "Search by name, location, brand, serial number, or tag",
+    search: "Search",
+    showArchived: "Include archived assets",
+    assetList: "Asset List",
+    clearSearch: "Clear search",
+    managementTools: "Management Tools",
+    toolIntro: "Open these tools only when you need to add assets, move data, or connect AI.",
+    addOneAsset: "Add an asset",
+    name: "Name",
+    namePlaceholder: "Example: Living room dehumidifier",
+    locationPath: "Location path",
+    locationPlaceholder: "Home / Living room / TV cabinet",
+    tags: "Tags",
+    tagsPlaceholder: "Appliance; Under warranty",
+    quantity: "Quantity",
+    notes: "Notes",
+    notesPlaceholder: "Purchase source, storage details, or anything your household should know",
+    addAsset: "Add asset",
+    importHomebox: "Import a HomeBox file",
+    chooseFile: "Choose a CSV or TSV file",
+    checkFile: "Check file first",
+    confirmImport: "Import these assets",
+    aiAndMcp: "AI and MCP Connections",
+    mcpIntro: "Create a revocable Remote MCP Connector URL.",
+    createMcpConnection: "Create MCP connection",
+    assetDetails: "Asset Details",
+    close: "Close",
+    closeAssetDetails: "Close asset details",
+    assetId: "Asset ID",
+    manufacturer: "Manufacturer",
+    modelNumber: "Model number",
+    serialNumber: "Serial number",
+    purchasePrice: "Purchase price",
+    insured: "Insured",
+    lifetimeWarranty: "Lifetime warranty",
+    cancel: "Cancel",
+    saveChanges: "Save changes",
+    requestFailed: "Request failed ({status})",
+    noLocation: "No location assigned",
+    loadingAssets: "Loading assets",
+    assetCountShown: "assets shown",
+    assetCountActive: "active assets",
+    emptyTitle: "No assets yet",
+    emptyCopy: "Start with an item you often misplace, need to keep under warranty, or do not want to forget when moving.",
+    quantityValue: "Quantity {value}",
+    archived: "Archived",
+    insuredBadge: "Insured",
+    lifetimeWarrantyBadge: "Lifetime warranty",
+    warrantyUntil: "Warranty until {date}",
+    openRecord: "Open record",
+    more: "More",
+    restoreToList: "Restore to asset list",
+    archive: "Archive",
+    checkingCredential: "Checking credential…",
+    inventoryOpened: "Asset list opened",
+    invalidCredential: "That credential did not work. Check it and try again.",
+    addingAsset: "Adding asset…",
+    assetAdded: "Asset added",
+    restoring: "Restoring…",
+    archiving: "Archiving…",
+    assetRestored: "Asset restored to the asset list",
+    assetArchived: "Asset archived. It will remain in HomeBox CSV exports.",
+    saving: "Saving…",
+    assetUpdated: "Asset updated",
+    selectFile: "Choose a HomeBox CSV or TSV file first.",
+    fileTooLarge: "This file is larger than 5 MB. Split it into smaller HomeBox CSV files and try again.",
+    checkingFormat: "Checking file format…",
+    formatPassed: "Format passed: {count} assets found. Showing the first {sample}.",
+    importingAssets: "Importing assets…",
+    importCompleted: "Import complete: {created} created, {updated} updated",
+    preparingCsv: "Preparing CSV…",
+    csvDownloaded: "HomeBox CSV downloaded",
+    noMcp: "No active MCP connections.",
+    validUntil: "Valid until {date}",
+    revoke: "Revoke",
+    revoking: "Revoking…",
+    mcpRevoked: "MCP connection revoked",
+    creatingConnection: "Creating connection…",
+    mcpCreated: "MCP Connector URL created. Store it like a password.",
+  },
+};
+
 const state = {
   token: localStorage.getItem("homeboxEdgeToken") || "",
+  locale: localStorage.getItem("homeboxEdgeLocale") === "en" ? "en" : "zh-Hant",
   assets: [],
   keys: [],
   query: "",
@@ -10,6 +214,49 @@ const state = {
 };
 
 let statusTimer;
+
+function t(key, values = {}) {
+  const template = COPY[state.locale][key] ?? COPY["zh-Hant"][key] ?? key;
+  return template.replace(/\{([a-zA-Z]+)\}/g, (_, name) => String(values[name] ?? `{${name}}`));
+}
+
+function setInlineLabel(element, value) {
+  const textNode = [...element.childNodes].find(
+    (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== "",
+  );
+  if (!textNode) return;
+  const followsControl = textNode.previousSibling?.nodeType === Node.ELEMENT_NODE;
+  textNode.textContent = followsControl ? ` ${value}` : value;
+}
+
+function applyTranslations() {
+  document.documentElement.lang = state.locale;
+  document.title = t("documentTitle");
+  for (const element of document.querySelectorAll("[data-i18n]")) {
+    if (element.id === "assetDialogTitle" && element.closest("dialog")?.open) continue;
+    element.textContent = t(element.dataset.i18n);
+  }
+  for (const element of document.querySelectorAll("[data-i18n-label]")) {
+    setInlineLabel(element, t(element.dataset.i18nLabel));
+  }
+  for (const element of document.querySelectorAll("[data-i18n-placeholder]")) {
+    element.placeholder = t(element.dataset.i18nPlaceholder);
+  }
+  for (const element of document.querySelectorAll("[data-i18n-aria-label]")) {
+    element.setAttribute("aria-label", t(element.dataset.i18nAriaLabel));
+  }
+  const languageButton = byId("languageButton");
+  languageButton.textContent = state.locale === "zh-Hant" ? "EN" : "中文";
+  languageButton.setAttribute(
+    "aria-label",
+    state.locale === "zh-Hant" ? "Switch to English" : "Switch to Traditional Chinese",
+  );
+  if (!byId("inventory").hidden) {
+    renderAssets();
+    renderKeys();
+  }
+}
+
 
 function showStatus(message, error = false) {
   const target = byId("status");
@@ -31,7 +278,7 @@ async function api(path, options = {}) {
   headers.set("Authorization", `Bearer ${state.token}`);
   const response = await fetch(path, { ...options, headers });
   if (!response.ok) {
-    let message = `請求失敗（${response.status}）`;
+    let message = t("requestFailed", { status: response.status });
     try {
       const body = await response.json();
       if (body.error) message = body.error;
@@ -44,23 +291,38 @@ async function api(path, options = {}) {
 }
 
 function locationText(asset) {
-  return asset.location?.length ? asset.location.join(" / ") : "尚未指定位置";
+  return asset.location?.length ? asset.location.join(" / ") : t("noLocation");
+}
+
+function renderAssetLoading() {
+  const grid = byId("assetGrid");
+  grid.setAttribute("aria-busy", "true");
+  grid.replaceChildren();
+  byId("assetCount").textContent = "—";
+  byId("assetCountLabel").textContent = t("loadingAssets");
+  for (let index = 0; index < 4; index += 1) {
+    const placeholder = document.createElement("div");
+    placeholder.className = "asset-skeleton";
+    placeholder.setAttribute("aria-hidden", "true");
+    grid.append(placeholder);
+  }
 }
 
 function renderAssets() {
   const grid = byId("assetGrid");
+  grid.setAttribute("aria-busy", "false");
   grid.replaceChildren();
   byId("assetCount").textContent = String(state.assets.length);
   byId("assetCountLabel").textContent = state.includeArchived
-    ? "件目前顯示資產"
-    : "件未封存資產";
+    ? t("assetCountShown")
+    : t("assetCountActive");
   if (state.assets.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
     const title = document.createElement("strong");
-    title.textContent = "台帳還是空的";
+    title.textContent = t("emptyTitle");
     const copy = document.createElement("span");
-    copy.textContent = "先記下一件常找不到、需要保固，或搬家時不想遺漏的物件。";
+    copy.textContent = t("emptyCopy");
     empty.append(title, copy);
     grid.append(empty);
     return;
@@ -88,12 +350,12 @@ function renderAssets() {
     const metadata = document.createElement("div");
     metadata.className = "asset-meta";
     const quantity = document.createElement("span");
-    quantity.textContent = `數量 ${asset.quantity}`;
+    quantity.textContent = t("quantityValue", { value: asset.quantity });
     metadata.append(quantity);
     if (asset.archived) {
       const archived = document.createElement("span");
       archived.className = "archived-badge";
-      archived.textContent = "已封存";
+      archived.textContent = t("archived");
       metadata.append(archived);
     }
     for (const tag of asset.tags || []) {
@@ -101,22 +363,41 @@ function renderAssets() {
       element.textContent = tag;
       metadata.append(element);
     }
+    if (asset.insured) {
+      const insured = document.createElement("span");
+      insured.className = "status-badge";
+      insured.textContent = t("insuredBadge");
+      metadata.append(insured);
+    }
+    if (asset.lifetime_warranty || asset.warranty_expires) {
+      const warranty = document.createElement("span");
+      warranty.className = "status-badge";
+      warranty.textContent = asset.lifetime_warranty
+        ? t("lifetimeWarrantyBadge")
+        : t("warrantyUntil", { date: asset.warranty_expires });
+      metadata.append(warranty);
+    }
 
     const actions = document.createElement("div");
     actions.className = "asset-actions";
     const edit = document.createElement("button");
-    edit.className = "text-button";
+    edit.className = "asset-open-button";
     edit.type = "button";
-    edit.textContent = "查看／編輯";
+    edit.textContent = t("openRecord");
     edit.addEventListener("click", () => {
       openAssetDialog(asset.id).catch((error) => showStatus(error.message, true));
     });
+    const menu = document.createElement("details");
+    menu.className = "asset-menu";
+    const menuLabel = document.createElement("summary");
+    menuLabel.textContent = t("more");
     const archive = document.createElement("button");
     archive.className = "archive-button";
     archive.type = "button";
-    archive.textContent = asset.archived ? "還原到台帳" : "封存這件資產";
+    archive.textContent = asset.archived ? t("restoreToList") : t("archive");
     archive.addEventListener("click", () => setAssetArchived(asset, archive));
-    actions.append(edit, archive);
+    menu.append(menuLabel, archive);
+    actions.append(edit, menu);
     article.append(heading, location, metadata, actions);
     grid.append(article);
   });
@@ -140,6 +421,7 @@ async function enterInventory() {
   byId("login").hidden = true;
   byId("inventory").hidden = false;
   byId("logoutButton").hidden = false;
+  renderAssetLoading();
   await Promise.all([loadAssets(), loadKeys()]);
 }
 
@@ -148,14 +430,14 @@ byId("loginForm").addEventListener("submit", async (event) => {
   const button = event.currentTarget.querySelector("button");
   button.dataset.label = button.textContent;
   state.token = byId("adminToken").value;
-  setBusy(button, true, "正在核對憑證…");
+  setBusy(button, true, t("checkingCredential"));
   try {
     await enterInventory();
     localStorage.setItem("homeboxEdgeToken", state.token);
-    showStatus("台帳已開啟");
+    showStatus(t("inventoryOpened"));
   } catch (error) {
     state.token = "";
-    showStatus(error.message || "憑證無法使用，請重新確認。", true);
+    showStatus(error.message || t("invalidCredential"), true);
   } finally {
     setBusy(button, false);
   }
@@ -171,6 +453,12 @@ byId("logoutButton").addEventListener("click", () => {
   byId("adminToken").focus();
 });
 
+byId("languageButton").addEventListener("click", () => {
+  state.locale = state.locale === "zh-Hant" ? "en" : "zh-Hant";
+  localStorage.setItem("homeboxEdgeLocale", state.locale);
+  applyTranslations();
+});
+
 byId("searchForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
@@ -183,10 +471,17 @@ byId("searchForm").addEventListener("submit", async (event) => {
 byId("clearSearchButton").addEventListener("click", async () => {
   byId("searchInput").value = "";
   try {
-    await loadAssets();
+    await loadAssets("");
   } catch (error) {
     showStatus(error.message, true);
   }
+});
+
+byId("openCreateButton").addEventListener("click", () => {
+  const panel = byId("createPanel");
+  panel.open = true;
+  panel.scrollIntoView({ block: "start" });
+  panel.querySelector('input[name="name"]').focus();
 });
 
 byId("includeArchived").addEventListener("change", async (event) => {
@@ -212,7 +507,7 @@ byId("assetForm").addEventListener("submit", async (event) => {
     .map((value) => value.trim())
     .filter(Boolean);
   button.dataset.label = button.textContent;
-  setBusy(button, true, "正在加入台帳…");
+  setBusy(button, true, t("addingAsset"));
   try {
     await api("/api/assets", {
       method: "POST",
@@ -227,8 +522,9 @@ byId("assetForm").addEventListener("submit", async (event) => {
     });
     form.reset();
     form.elements.quantity.value = "1";
+    byId("createPanel").open = false;
     await loadAssets();
-    showStatus("資產已加入台帳");
+    showStatus(t("assetAdded"));
   } catch (error) {
     showStatus(error.message, true);
   } finally {
@@ -238,7 +534,7 @@ byId("assetForm").addEventListener("submit", async (event) => {
 
 async function setAssetArchived(asset, button) {
   button.dataset.label = button.textContent;
-  setBusy(button, true, asset.archived ? "正在還原…" : "正在封存…");
+  setBusy(button, true, asset.archived ? t("restoring") : t("archiving"));
   try {
     if (asset.archived) {
       await api(`/api/assets/${encodeURIComponent(asset.id)}`, {
@@ -246,10 +542,10 @@ async function setAssetArchived(asset, button) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ archived: false }),
       });
-      showStatus("資產已還原到台帳");
+      showStatus(t("assetRestored"));
     } else {
       await api(`/api/assets/${encodeURIComponent(asset.id)}/archive`, { method: "POST" });
-      showStatus("資產已封存，仍會保留在 HomeBox CSV 匯出中");
+      showStatus(t("assetArchived"));
     }
     await loadAssets();
   } catch (error) {
@@ -319,7 +615,7 @@ byId("assetEditForm").addEventListener("submit", async (event) => {
     lifetime_warranty: data.get("lifetime_warranty") === "on",
   };
   button.dataset.label = button.textContent;
-  setBusy(button, true, "正在儲存…");
+  setBusy(button, true, t("saving"));
   try {
     await api(`/api/assets/${encodeURIComponent(id)}`, {
       method: "PATCH",
@@ -328,7 +624,7 @@ byId("assetEditForm").addEventListener("submit", async (event) => {
     });
     closeAssetDialog();
     await loadAssets();
-    showStatus("資產資料已更新");
+    showStatus(t("assetUpdated"));
   } catch (error) {
     showStatus(error.message, true);
   } finally {
@@ -339,16 +635,16 @@ byId("assetEditForm").addEventListener("submit", async (event) => {
 byId("previewImportButton").addEventListener("click", async () => {
   const file = byId("csvFile").files[0];
   if (!file) {
-    showStatus("請先選擇 HomeBox CSV 或 TSV 檔案。", true);
+    showStatus(t("selectFile"), true);
     return;
   }
   if (file.size > 5 * 1024 * 1024) {
-    showStatus("檔案超過 5 MB。請拆成較小的 HomeBox CSV 再匯入。", true);
+    showStatus(t("fileTooLarge"), true);
     return;
   }
   const button = byId("previewImportButton");
   button.dataset.label = button.textContent;
-  setBusy(button, true, "正在檢查格式…");
+  setBusy(button, true, t("checkingFormat"));
   try {
     state.importCsv = await file.text();
     const response = await api("/api/homebox/preview", {
@@ -360,7 +656,10 @@ byId("previewImportButton").addEventListener("click", async () => {
     const target = byId("importPreview");
     target.replaceChildren();
     const summary = document.createElement("p");
-    summary.textContent = `格式通過：共 ${preview.count} 筆，以下顯示前 ${preview.sample.length} 筆。`;
+    summary.textContent = t("formatPassed", {
+      count: preview.count,
+      sample: preview.sample.length,
+    });
     target.append(summary);
     for (const asset of preview.sample) {
       const row = document.createElement("div");
@@ -385,7 +684,7 @@ byId("previewImportButton").addEventListener("click", async () => {
 byId("confirmImportButton").addEventListener("click", async () => {
   const button = byId("confirmImportButton");
   button.dataset.label = button.textContent;
-  setBusy(button, true, "正在匯入資產…");
+  setBusy(button, true, t("importingAssets"));
   try {
     const response = await api("/api/homebox/import", {
       method: "POST",
@@ -398,7 +697,7 @@ byId("confirmImportButton").addEventListener("click", async () => {
     byId("csvFile").value = "";
     byId("importPreview").replaceChildren();
     button.hidden = true;
-    showStatus(`匯入完成：新增 ${result.created} 筆、更新 ${result.updated} 筆`);
+    showStatus(t("importCompleted", { created: result.created, updated: result.updated }));
   } catch (error) {
     showStatus(error.message, true);
   } finally {
@@ -409,7 +708,7 @@ byId("confirmImportButton").addEventListener("click", async () => {
 byId("exportButton").addEventListener("click", async () => {
   const button = byId("exportButton");
   button.dataset.label = button.textContent;
-  setBusy(button, true, "正在整理 CSV…");
+  setBusy(button, true, t("preparingCsv"));
   try {
     const response = await api("/api/homebox/export");
     const blob = await response.blob();
@@ -419,7 +718,7 @@ byId("exportButton").addEventListener("click", async () => {
     link.download = `homebox-edge-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    showStatus("HomeBox CSV 已下載");
+    showStatus(t("csvDownloaded"));
   } catch (error) {
     showStatus(error.message, true);
   } finally {
@@ -433,7 +732,7 @@ function renderKeys() {
   if (state.keys.length === 0) {
     const empty = document.createElement("p");
     empty.className = "field-note";
-    empty.textContent = "目前沒有有效的 MCP 連線。";
+    empty.textContent = t("noMcp");
     target.append(empty);
     return;
   }
@@ -444,19 +743,23 @@ function renderKeys() {
     const preview = document.createElement("strong");
     preview.textContent = key.preview;
     const expiry = document.createElement("span");
-    expiry.textContent = `有效至 ${new Date(key.expires_at * 1000).toLocaleDateString("zh-TW")}`;
+    expiry.textContent = t("validUntil", {
+      date: new Date(key.expires_at * 1000).toLocaleDateString(
+        state.locale === "en" ? "en-US" : "zh-TW",
+      ),
+    });
     details.append(preview, expiry);
     const revoke = document.createElement("button");
     revoke.className = "text-button danger-button";
     revoke.type = "button";
-    revoke.textContent = "撤銷";
+    revoke.textContent = t("revoke");
     revoke.addEventListener("click", async () => {
       revoke.dataset.label = revoke.textContent;
-      setBusy(revoke, true, "撤銷中…");
+      setBusy(revoke, true, t("revoking"));
       try {
         await api(`/api/keys/${encodeURIComponent(key.id)}`, { method: "DELETE" });
         await loadKeys();
-        showStatus("MCP 連線已撤銷");
+        showStatus(t("mcpRevoked"));
       } catch (error) {
         showStatus(error.message, true);
         setBusy(revoke, false);
@@ -477,19 +780,21 @@ async function loadKeys() {
 byId("createKeyButton").addEventListener("click", async () => {
   const button = byId("createKeyButton");
   button.dataset.label = button.textContent;
-  setBusy(button, true, "正在建立連線…");
+  setBusy(button, true, t("creatingConnection"));
   try {
     const response = await api("/api/keys", { method: "POST" });
     const result = await response.json();
     byId("connectorOutput").textContent = result.connector_url;
     await loadKeys();
-    showStatus("MCP Connector URL 已建立；請把它當作密碼保管。 ");
+    showStatus(t("mcpCreated"));
   } catch (error) {
     showStatus(error.message, true);
   } finally {
     setBusy(button, false);
   }
 });
+
+applyTranslations();
 
 if (state.token) {
   enterInventory().catch(() => {

@@ -11,16 +11,22 @@ Implemented in the current v0.1 workspace:
 - D1 FTS5 search across asset fields
 - HomeBox v0.26.2 item CSV/TSV preview, confirmed import, idempotent import-ref upsert, and canonical export
 - Remote MCP CRUD/search/import/export tools with complete strict input schemas
-- individually revocable KV-backed MCP keys
+- individually revocable MCP keys with D1 authorization, SHA-256 storage indexes, and a legacy KV compatibility mirror
 
 Release gates:
 
-- [ ] Run a real HomeBox v0.26.2 → HomeBox Edge → clean HomeBox v0.26.2 round trip and compare every field listed in `HOMEBOX-COMPATIBILITY.md`.
+- [x] Run a real HomeBox v0.26.2 → HomeBox Edge → clean HomeBox v0.26.2 round trip and compare every field listed in `HOMEBOX-COMPATIBILITY.md`.
 - [x] Configure production D1/KV bindings and keep `ADMIN_TOKEN` outside source control.
 - [x] Apply remote migrations and deploy the Worker to its platform URL.
 - [x] Run authenticated 375px, 768px, and 1280px browser QA against the deployed build.
 
-The production infrastructure and browser gates were verified on 2026-08-09. The remaining unchecked round trip is required before expanding the compatibility claim beyond the pinned contract tests.
+The production infrastructure and browser gates were verified on 2026-08-09. The official-binary CSV round trip and isolated transaction/failure checks were also completed on 2026-08-09. On 2026-08-10, the production-build harness passed the real asset lifecycle, HomeBox CSV export, D1 parent triggers, child-before-parent import, D1/KV MCP revoke flow, security headers, and bounded request handling. Production still requires migration `0003_asset_parent_invariants.sql` and the current Worker revision before these fixes are live.
+
+Remaining operations gates before calling the next revision launch-ready:
+
+- [ ] Choose production request-rate thresholds and add a Cloudflare Rate Limiting binding; limits are product policy and are not guessed in code.
+- [ ] Configure an external `/healthz` monitor with an off-platform notification channel; dashboard-only visibility is insufficient.
+- [ ] Record a pre-release D1 Time Travel bookmark and execute the post-deploy smoke checks in `RELEASE.md`.
 
 ## Phase 2 — collection ZIP and attachments
 

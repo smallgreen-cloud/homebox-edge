@@ -1,0 +1,13 @@
+HB.import_ref,HB.parent_import_ref,HB.location,HB.tags,HB.asset_id,HB.archived,HB.url,HB.name,HB.quantity,HB.description,HB.insured,HB.notes,HB.purchase_price,HB.purchase_from,HB.purchase_date,HB.manufacturer,HB.model_number,HB.serial_number,HB.lifetime_warranty,HB.warranty_expires,HB.warranty_details,HB.sold_to,HB.sold_price,HB.sold_date,HB.sold_notes,HB.field.Color,HB.field.Voltage
+,,,,,false,/location/8c61ff17-38f4-42c7-b07e-796943553462,Living Room,1,,false,,0,,,,,,false,,,,0,,,,
+,,,,,false,/location/a45c8141-bcb0-46c8-a615-424bb92c88f3,Garage,1,,false,,0,,,,,,false,,,,0,,,,
+,,,,,false,/location/ede1a03f-6890-4a99-b305-d95e86eef41e,Kitchen,1,,false,,0,,,,,,false,,,,0,,,,
+,,,,,false,/location/2cf74c27-d4de-45c4-8c43-1d31cb278443,Bedroom,1,,false,,0,,,,,,false,,,,0,,,,
+,,,,,false,/location/53a0ab35-1037-4f69-b7ea-f82c75e2a3b3,Bathroom,1,,false,,0,,,,,,false,,,,0,,,,
+,,,,,false,/location/9fbeddca-ba34-4e6a-8034-db4f1fdb52e1,Office,1,,false,,0,,,,,,false,,,,0,,,,
+,,,,,false,/location/8c67b0e3-210e-4c8b-bf4e-a124ee1e70b0,Attic,1,,false,,0,,,,,,false,,,,0,,,,
+,,,,,false,/location/f0694606-72e4-4529-bec8-57e017dde264,Basement,1,,false,,0,,,,,,false,,,,0,,,,
+,,,,,false,/location/fb3e75bc-be98-466c-a83d-5202893ed0c9,Home,1,,false,,0,,,,,,false,,,,0,,,,
+,,Home,,,false,/location/830d4c1f-4fa8-4da5-a9f2-4998ec56569b,Storage,1,,false,,0,,,,,,false,,,,0,,,,
+parent-ref,,Home / Storage,Important; Tools,000-042,false,/item/8d193e7b-4131-4b6c-8a79-fd53be8ef141,Toolbox,1,Steel toolbox,true,"Keeps sockets, bits",1299.5,Hardware Shop,2026-01-02,Acme,TB-9,SN-100,true,,Lifetime plan,,0,,,Red,
+child-ref,parent-ref,Home / Storage,Tools,000-043,false,/item/87676924-602d-4084-a419-5729e5661492,Screwdriver,2,Phillips,false,,99,Hardware Shop,2026-01-03,Acme,PH2,SN-101,false,2027-01-03,Receipt required,,0,,,Blue,110V

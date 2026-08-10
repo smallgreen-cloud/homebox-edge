@@ -4,6 +4,12 @@ import { z } from "zod";
 import { authenticateWeb } from "./auth";
 import { parseHomeboxCsv, renderHomeboxCsv } from "./compat/homebox-csv";
 import { HomeAssetPatchSchema, HomeAssetSchema } from "./core/asset";
+import { PublicHttpError } from "./errors";
+import {
+  MAX_CSV_REQUEST_BYTES,
+  MAX_STANDARD_JSON_BYTES,
+  readJsonBody,
+} from "./http/body";
 import { issueKey, listKeys, revokeKey } from "./key-manager";
 import { handleMcp } from "./mcp/handler";
 import {
@@ -22,14 +28,33 @@ type Variables = { ownerId: string };
 const app = new Hono<{ Bindings: RuntimeEnv; Variables: Variables }>();
 
 const CsvPayloadSchema = z
-  .object({ csv_text: z.string().min(1).max(5 * 1024 * 1024) })
+  .object({ csv_text: z.string().min(1) })
   .strict();
 const CsvImportPayloadSchema = z
   .object({
-    csv_text: z.string().min(1).max(5 * 1024 * 1024),
+    csv_text: z.string().min(1),
     confirmed: z.boolean(),
   })
   .strict();
+
+const SECURITY_HEADERS = {
+  "Content-Security-Policy": [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self'",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+  ].join("; "),
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "no-referrer",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "X-Frame-Options": "DENY",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+} as const;
 
 async function requireOwner(
   request: Request,
@@ -38,7 +63,24 @@ async function requireOwner(
   return authenticateWeb(request, adminToken);
 }
 
+app.use("*", async (context, next) => {
+  await next();
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    context.header(name, value);
+  }
+  const pathname = new URL(context.req.url).pathname;
+  if (pathname.startsWith("/api/") || pathname === "/mcp") {
+    context.header("Cache-Control", "private, no-store");
+  }
+});
+
 app.onError((error, context) => {
+  if (error instanceof PublicHttpError) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: error.status,
+      headers: { "Content-Type": "application/json; charset=UTF-8" },
+    });
+  }
   console.error(
     JSON.stringify({
       message: "request failed",
@@ -54,6 +96,7 @@ app.get("/healthz", (context) =>
 );
 
 app.post("/mcp", (context) => handleMcp(context.req.raw, context.env));
+app.get("/mcp", (context) => context.body(null, 405, { Allow: "POST" }));
 
 app.use("/api/*", async (context, next) => {
   const owner = await requireOwner(context.req.raw, context.env.ADMIN_TOKEN);
@@ -67,30 +110,32 @@ app.get("/api/me", (context) =>
 );
 
 app.get("/api/keys", async (context) =>
-  context.json({ keys: await listKeys(context.env.MCP_KEYS, context.get("ownerId")) }),
+  context.json({
+    keys: await listKeys(context.env.DB, context.env.MCP_KEYS, context.get("ownerId")),
+  }),
 );
 
 app.post("/api/keys", async (context) => {
-  try {
-    const record = await issueKey(context.env.MCP_KEYS, {
+  const record = await issueKey(
+    context.env.DB,
+    context.env.MCP_KEYS,
+    {
       uid: context.get("ownerId"),
       email: "owner",
-    });
-    const origin = new URL(context.req.url).origin;
-    return context.json({
-      id: record.id,
-      key: record.key,
-      expires_at: record.expires_at,
-      connector_url: `${origin}/mcp?key=${record.key}`,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "建立 MCP key 失敗";
-    return context.json({ error: message }, 400);
-  }
+    },
+  );
+  const origin = new URL(context.req.url).origin;
+  return context.json({
+    id: record.id,
+    key: record.key,
+    expires_at: record.expires_at,
+    connector_url: `${origin}/mcp?token=${record.key}`,
+  });
 });
 
 app.delete("/api/keys/:id", async (context) => {
   const revoked = await revokeKey(
+    context.env.DB,
     context.env.MCP_KEYS,
     context.get("ownerId"),
     context.req.param("id"),
@@ -115,12 +160,7 @@ app.get("/api/assets", async (context) => {
 });
 
 app.post("/api/assets", async (context) => {
-  let body: unknown;
-  try {
-    body = await context.req.json();
-  } catch {
-    return context.json({ error: "Request body must be JSON" }, 400);
-  }
+  const body = await readJsonBody(context.req.raw, MAX_STANDARD_JSON_BYTES);
   const object = typeof body === "object" && body !== null ? body : {};
   const parsed = HomeAssetSchema.safeParse({ quantity: 1, ...object });
   if (!parsed.success) return context.json({ error: "Invalid asset" }, 400);
@@ -147,12 +187,7 @@ app.get("/api/assets/:id", async (context) => {
 });
 
 app.patch("/api/assets/:id", async (context) => {
-  let body: unknown;
-  try {
-    body = await context.req.json();
-  } catch {
-    return context.json({ error: "Request body must be JSON" }, 400);
-  }
+  const body = await readJsonBody(context.req.raw, MAX_STANDARD_JSON_BYTES);
   const parsed = HomeAssetPatchSchema.safeParse(body);
   if (!parsed.success) return context.json({ error: "Invalid asset patch" }, 400);
   const changed = await updateAsset(
@@ -180,53 +215,33 @@ app.post("/api/assets/:id/archive", async (context) => {
 });
 
 app.post("/api/homebox/preview", async (context) => {
-  let body: unknown;
-  try {
-    body = await context.req.json();
-  } catch {
-    return context.json({ error: "Request body must be JSON" }, 400);
-  }
+  const body = await readJsonBody(context.req.raw, MAX_CSV_REQUEST_BYTES);
   const parsed = CsvPayloadSchema.safeParse(body);
   if (!parsed.success) return context.json({ error: "Invalid CSV payload" }, 400);
-  try {
-    const assets = parseHomeboxCsv(parsed.data.csv_text);
-    return context.json({
-      count: assets.length,
-      sample: assets.slice(0, 10),
-      requires_confirmation: true,
-      compatibility: "HomeBox v0.26.2 item CSV",
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "CSV parse failed";
-    return context.json({ error: message }, 400);
-  }
+  const assets = parseHomeboxCsv(parsed.data.csv_text);
+  return context.json({
+    count: assets.length,
+    sample: assets.slice(0, 10),
+    requires_confirmation: true,
+    compatibility: "HomeBox v0.26.2 item CSV",
+  });
 });
 
 app.post("/api/homebox/import", async (context) => {
-  let body: unknown;
-  try {
-    body = await context.req.json();
-  } catch {
-    return context.json({ error: "Request body must be JSON" }, 400);
-  }
+  const body = await readJsonBody(context.req.raw, MAX_CSV_REQUEST_BYTES);
   const base = CsvImportPayloadSchema.safeParse(body);
   if (!base.success) return context.json({ error: "Invalid CSV payload" }, 400);
   if (base.data.confirmed !== true) {
     return context.json({ error: "Import requires confirmed: true" }, 409);
   }
-  try {
-    const assets = parseHomeboxCsv(base.data.csv_text);
-    const result = await upsertImportedAssets(
-      context.env.DB,
-      context.get("ownerId"),
-      assets,
-      new Date().toISOString(),
-    );
-    return context.json({ imported: assets.length, ...result });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "CSV import failed";
-    return context.json({ error: message }, 400);
-  }
+  const assets = parseHomeboxCsv(base.data.csv_text);
+  const result = await upsertImportedAssets(
+    context.env.DB,
+    context.get("ownerId"),
+    assets,
+    new Date().toISOString(),
+  );
+  return context.json({ imported: assets.length, ...result });
 });
 
 app.get("/api/homebox/export", async (context) => {
