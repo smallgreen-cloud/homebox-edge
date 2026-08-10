@@ -264,7 +264,7 @@ app.all("*", async (context) => {
     /^\/a\/[^/]+\/?$/.test(requestUrl.pathname);
   if (isAppRoute) {
     requestUrl.pathname = "/";
-    requestUrl.searchParams.set("asset-version", "homebox-edge-v1");
+    requestUrl.searchParams.set("asset-version", "sha256-88e61cd01f58");
   }
   const response = await context.env.ASSETS.fetch(
     new Request(requestUrl, context.req.raw),
