@@ -1,6 +1,6 @@
 # HomeBox Edge
 
-HomeBox Edge 是一套非官方、serverless、HomeBox-compatible 的家庭資產台帳。它沿用 TapCard MCP 的 Cloudflare-only 形狀：同一個 Worker 提供手機／網頁 UI、私人 API、Remote MCP、D1 資料與全文搜尋，以及可撤銷的 KV MCP key。
+HomeBox Edge 是一套非官方、serverless、HomeBox-compatible 的家庭資產管理系統。它沿用 TapCard MCP 的 Cloudflare-only 形狀：同一個 Worker 提供手機／網頁 UI、私人 API、Remote MCP、D1 資料與全文搜尋，以及可撤銷的 MCP key。
 
 它不是 HomeBox fork，也不包含 HomeBox 的 AGPL 程式碼。v0.1 的「HomeBox-compatible」明確指向 HomeBox `v0.26.2` 的物件 CSV/TSV 雙向交換。
 
@@ -8,7 +8,7 @@ HomeBox Edge 是一套非官方、serverless、HomeBox-compatible 的家庭資�
 
 ## 現有功能
 
-- 手機與桌面共用的家庭資產台帳
+- 手機與桌面共用的家庭資產清單
 - 新增、搜尋、詳情編輯、封存與還原
 - 可選擇同時瀏覽及搜尋已封存資產
 - D1 + FTS5：名稱、位置、品牌、型號、序號、標籤與自訂欄位搜尋
@@ -16,7 +16,7 @@ HomeBox Edge 是一套非官方、serverless、HomeBox-compatible 的家庭資�
 - 明確確認後才匯入；`HB.import_ref` 以 owner scope upsert
 - HomeBox canonical CSV 匯出，包含封存項目
 - `HB.parent_import_ref`、位置階層、標籤、日期、保固、出售資訊與 `HB.field.*`
-- Remote MCP 與個別可撤銷的 `hi_` connector key
+- Remote MCP 與個別可撤銷的 `hi_` connector key；D1/KV 只保存 SHA-256 指紋索引
 - UI 可列出 MCP key 預覽、到期日並個別撤銷；完整 URL 只在建立時顯示
 - MCP tool schema 完整公開 HomeBox-compatible 欄位並拒絕未宣告輸入
 - 完整 collection ZIP manifest/table 契約已固定，restore 尚未開放
@@ -30,12 +30,16 @@ Mobile / Browser / AI client
        ├── Static Assets：responsive UI
        ├── owner API + Remote MCP
        ├── HomeBox CSV compatibility boundary
-       ├── D1：assets + FTS5
-       └── KV：revocable MCP keys
+       ├── D1：assets + FTS5 + MCP key registry
+       └── KV：legacy MCP credential compatibility mirror
 ```
 
 格式細節與版本來源見 [docs/HOMEBOX-COMPATIBILITY.md](docs/HOMEBOX-COMPATIBILITY.md)，產品不變量見 [docs/SPEC.md](docs/SPEC.md)。
-分階段交付與 release gate 見 [docs/ROADMAP.md](docs/ROADMAP.md)。
+分階段交付與 release gate 見 [docs/ROADMAP.md](docs/ROADMAP.md)，正式發布與回復程序見 [docs/RELEASE.md](docs/RELEASE.md)。
+
+## 部署驗證範例
+
+`examples/homebox-v0.26.2-household-assets.csv` 提供 24 筆可直接預覽、匯入及重播的合成家庭資產，涵蓋父子關係、中文位置與標籤、保固、投保、封存、出售及自訂欄位。資料全部標示為 `Synthetic for testing only`，不含真實家庭資產。預期結果與 agent 驗證順序見 [examples/README.md](examples/README.md)。
 
 ## MCP tools
 
@@ -60,11 +64,13 @@ npm run cf-typegen
 npm run migrate:local
 npm test
 npm run typecheck
+npx wrangler types --check
 npm run build
+npm audit --omit=dev --audit-level=high
 npm run dev
 ```
 
-測試門檻：lines／functions／statements 80%，branches 75%。
+測試門檻：lines／functions／statements 80%，branches 75%。`npm test` 同時執行 production-build Worker harness，使用真正的 Workerd、D1 migrations 與 KV binding 驗證資產生命週期、HomeBox CSV、MCP key 撤銷、關聯不變量、安全標頭及 request-size 邊界。
 
 ## 部署準備
 
@@ -86,7 +92,7 @@ npm run typecheck
 npx wrangler deploy
 ```
 
-部署後開啟 `/app`，輸入 `ADMIN_TOKEN`，再於「連接 AI 工具」建立 Connector URL。完整 URL 含私人 key，視同密碼。
+正式操作必須依 [release runbook](docs/RELEASE.md) 先記錄 D1 Time Travel bookmark、檢查待套 migration，部署後再跑 health、owner API、MCP revoke 與瀏覽器 smoke test。部署後開啟 `/app`，輸入 `ADMIN_TOKEN`，再於「AI 與 MCP 連線」建立 Connector URL。完整 URL 含私人 key，視同密碼。
 
 ## 資料聲明
 

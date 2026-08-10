@@ -41,6 +41,9 @@ Rules:
 - Tags are separated by `;` and canonically exported as `; `.
 - `HB.import_ref` is at most 100 characters and is the upsert/deduplication key.
 - `HB.parent_import_ref` represents item-to-item parentage. Self-parenting is invalid.
+- The complete parent-reference graph must remain acyclic, including relationships that already exist in storage.
+- HomeBox exports location entities and item entities through the same CSV shape. Rows whose `HB.url` path is `/location/{id}` are location definitions and are not imported as assets; item `HB.location` carries the portable hierarchy.
+- HomeBox can export `HB.url` as a relative `/item/{id}` path. Relative entity paths are instance-local navigation metadata and are omitted on import; absolute item URLs remain portable and are preserved.
 - `HB.tags` is the canonical export header; `HB.labels` is accepted on import.
 - `HB.purchase_date` and `HB.sold_date` are canonical exports; legacy `HB.purchase_time` and `HB.sold_time` are accepted.
 - Dates export as `YYYY-MM-DD`. The pinned release accepts `YYYY-MM-DD`, `MM/DD/YYYY`, `YYYY/MM/DD`, and RFC 3339 on CSV input.
@@ -79,6 +82,21 @@ HB.field.*
 ```
 
 The upstream documentation at this release still says item-to-item relationships are unsupported. The release code and `TestCSVExportImportPreservesItemParent` prove that `HB.parent_import_ref` is supported, so the tested behavior wins.
+
+The official `v0.26.2` exporter fixture is retained at `tests/fixtures/homebox-v0.26.2-official-export.csv`. It contains synthetic test assets plus the release's default location rows (`Synthetic for testing only`).
+
+The agent-facing deployment fixture lives at `examples/homebox-v0.26.2-household-assets.csv`. It contains 24 common household assets (`Synthetic for testing only`) and a machine-readable expected-result manifest. Contract tests parse and canonically serialize it; the production-build harness also proves preview has no write side effect, first import creates 24 rows in an empty owner, replay updates the same 24 import refs, archived filtering works, and D1 export preserves all portable fields.
+
+## Verified round trip
+
+Verified on 2026-08-09 with the official Darwin arm64 `v0.26.2` binary, which reported commit `e01dd737238a3fa7e1a6454b37de6c6fc88c86e4`:
+
+1. HomeBox Edge exported the two synthetic parent/child assets.
+2. A clean HomeBox collection accepted the CSV with HTTP 204 and exported both import refs.
+3. HomeBox Edge parsed that official export as two assets while excluding ten location entity rows.
+4. The parent reference, locations, tags, custom fields, prices, dates, warranty fields, flags, quantities, descriptions, identifiers, and sold fields matched; `HB.url` was intentionally excluded from semantic equality because HomeBox regenerates instance-local entity paths.
+
+The same isolated verification submitted 2,000 synthetic rows in one confirmed import, replayed them idempotently, and forced a failure at row 151 of a 250-row batch. The failed transaction left zero matching rows.
 
 ## Full collection ZIP
 
