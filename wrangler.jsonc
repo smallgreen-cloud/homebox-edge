@@ -30,6 +30,15 @@
       "id": "0012d95bf76446ce8c271b85b896dd3e"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "ASSET_FILES",
+      "bucket_name": "homebox-edge-files"
+    }
+  ],
+  "images": {
+    "binding": "IMAGES"
+  },
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",

@@ -13,6 +13,17 @@ const storage = vi.hoisted(() => ({
   updateAsset: vi.fn(),
   archiveAsset: vi.fn(),
 }));
+const attachments = vi.hoisted(() => ({
+  countPhotoAttachments: vi.fn(),
+  deleteAttachment: vi.fn(),
+  getAttachment: vi.fn(),
+  insertAttachment: vi.fn(),
+  listAttachments: vi.fn(),
+  listPrimaryPhotoAttachments: vi.fn(),
+  setPrimaryPhoto: vi.fn(),
+  updateAttachmentTitle: vi.fn(),
+}));
+const media = vi.hoisted(() => ({ processPhoto: vi.fn() }));
 const keys = vi.hoisted(() => ({
   issueKey: vi.fn(),
   listKeys: vi.fn(),
@@ -20,6 +31,11 @@ const keys = vi.hoisted(() => ({
 }));
 vi.mock("../src/auth", () => auth);
 vi.mock("../src/storage/assets", () => storage);
+vi.mock("../src/storage/attachments", () => attachments);
+vi.mock("../src/media/photos", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/media/photos")>()),
+  processPhoto: media.processPhoto,
+}));
 vi.mock("../src/key-manager", () => keys);
 
 import app from "../src/index";
@@ -41,10 +57,16 @@ const asset = {
   updated_at: "2026-08-08T00:00:00.000Z",
 };
 
+const r2 = {
+  put: vi.fn().mockResolvedValue({}),
+  get: vi.fn(),
+  delete: vi.fn().mockResolvedValue(undefined),
+};
 const env = {
   DB: {} as D1Database,
   MCP_KEYS: {} as KVNamespace,
-  ASSET_FILES: {} as R2Bucket,
+  ASSET_FILES: r2 as unknown as R2Bucket,
+  IMAGES: {} as ImagesBinding,
   ADMIN_TOKEN: "test-admin-token",
   PUBLIC_BASE_URL: "https://inventory.example",
   ASSETS: {
@@ -61,6 +83,22 @@ beforeEach(() => {
   storage.updateAsset.mockResolvedValue(true);
   storage.archiveAsset.mockResolvedValue(true);
   storage.upsertImportedAssets.mockResolvedValue({ created: 1, updated: 0 });
+  attachments.countPhotoAttachments.mockResolvedValue(0);
+  attachments.deleteAttachment.mockResolvedValue(null);
+  attachments.listAttachments.mockResolvedValue([]);
+  attachments.listPrimaryPhotoAttachments.mockResolvedValue([]);
+  attachments.setPrimaryPhoto.mockResolvedValue(true);
+  attachments.updateAttachmentTitle.mockResolvedValue(true);
+  media.processPhoto.mockResolvedValue({
+    mimeType: "image/jpeg",
+    width: 1200,
+    height: 800,
+    thumbnailBytes: new Uint8Array([4, 5, 6]).buffer,
+    thumbnailMimeType: "image/webp",
+  });
+  r2.put.mockResolvedValue({});
+  r2.get.mockReset();
+  r2.delete.mockResolvedValue(undefined);
   keys.listKeys.mockResolvedValue([]);
   keys.issueKey.mockResolvedValue({ id: "key_1", key: "hi_secret", expires_at: 123 });
   keys.revokeKey.mockResolvedValue(true);
@@ -106,6 +144,151 @@ describe("web and HomeBox interchange API", () => {
 
     await app.request("/api/assets?q=Laptop&include_archived=true", {}, env);
     expect(storage.searchAssets).toHaveBeenCalledWith(env.DB, "owner", "Laptop", true);
+  });
+
+  it("returns protected photo metadata on asset lists and detail records", async () => {
+    const photo = {
+      id: "attachment_1",
+      asset_id: "asset_1",
+      type: "photo",
+      primary_photo: true,
+      title: "Laptop.jpg",
+      object_key: "original-key",
+      thumbnail_key: "thumbnail-key",
+      mime_type: "image/jpeg",
+      size_bytes: 3,
+      width: 1200,
+      height: 800,
+      created_at: asset.created_at,
+      updated_at: asset.updated_at,
+    };
+    attachments.listPrimaryPhotoAttachments.mockResolvedValue([photo]);
+    attachments.listAttachments.mockResolvedValue([photo]);
+
+    await expect((await app.request("/api/assets", {}, env)).json()).resolves.toMatchObject({
+      assets: [{ primary_photo: { thumbnail_url: expect.stringContaining("/thumbnail") } }],
+    });
+    await expect((await app.request("/api/assets/asset_1", {}, env)).json()).resolves.toMatchObject({
+      asset: { attachments: [{ original_url: expect.stringContaining("attachment_1") }] },
+    });
+  });
+
+  it("uploads a bounded original and generated thumbnail, then cleans R2 on metadata failure", async () => {
+    const request = () => ({
+      method: "POST",
+      headers: { "Content-Type": "image/jpeg", "Content-Length": "3" },
+      body: new Uint8Array([1, 2, 3]),
+    });
+    const uploaded = await app.request(
+      "/api/assets/asset_1/photos?title=Laptop.jpg&primary=true",
+      request(),
+      env,
+    );
+    expect(uploaded.status).toBe(201);
+    expect(r2.put).toHaveBeenCalledTimes(2);
+    expect(attachments.insertAttachment).toHaveBeenCalledWith(
+      env.DB,
+      "owner",
+      expect.objectContaining({
+        asset_id: "asset_1",
+        primary_photo: false,
+        title: "Laptop.jpg",
+        thumbnail_key: expect.stringContaining("thumbnail.webp"),
+      }),
+    );
+    expect(attachments.setPrimaryPhoto).toHaveBeenCalled();
+
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    attachments.insertAttachment.mockRejectedValueOnce(new Error("D1 failed"));
+    const failed = await app.request("/api/assets/asset_1/photos", request(), env);
+    expect(failed.status).toBe(500);
+    expect(r2.delete).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.stringContaining("/original"),
+      expect.stringContaining("/thumbnail.webp"),
+    ]));
+    log.mockRestore();
+  });
+
+  it("streams owner-scoped originals and thumbnails without public object URLs", async () => {
+    attachments.getAttachment.mockResolvedValue({
+      id: "attachment_1",
+      asset_id: "asset_1",
+      type: "photo",
+      primary_photo: true,
+      title: "Laptop.jpg",
+      object_key: "original-key",
+      thumbnail_key: "thumbnail-key",
+      mime_type: "image/jpeg",
+      size_bytes: 3,
+      width: 1,
+      height: 1,
+      created_at: asset.created_at,
+      updated_at: asset.updated_at,
+    });
+    r2.get.mockImplementation(async () => ({
+      body: new Response(new Uint8Array([1, 2, 3])).body,
+      size: 3,
+      etag: "etag-1",
+    }));
+
+    const original = await app.request(
+      "/api/assets/asset_1/attachments/attachment_1",
+      {},
+      env,
+    );
+    expect(original.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(await original.arrayBuffer()).toEqual(new Uint8Array([1, 2, 3]).buffer);
+    const thumbnail = await app.request(
+      "/api/assets/asset_1/attachments/attachment_1/thumbnail",
+      {},
+      env,
+    );
+    expect(thumbnail.status).toBe(200);
+    expect(r2.get).toHaveBeenLastCalledWith("thumbnail-key");
+  });
+
+  it("renames a photo and selects it as the asset primary image", async () => {
+    attachments.getAttachment.mockResolvedValue({
+      id: "attachment_1",
+      asset_id: "asset_1",
+      type: "photo",
+      primary_photo: false,
+      title: "Side.jpg",
+      object_key: "original-key",
+      thumbnail_key: "thumbnail-key",
+      mime_type: "image/jpeg",
+      size_bytes: 3,
+      width: 1,
+      height: 1,
+      created_at: asset.created_at,
+      updated_at: asset.updated_at,
+    });
+    const response = await app.request(
+      "/api/assets/asset_1/attachments/attachment_1",
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Front.jpg", primary: true }),
+      },
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(attachments.updateAttachmentTitle).toHaveBeenCalledWith(
+      env.DB,
+      "owner",
+      "asset_1",
+      "attachment_1",
+      "Front.jpg",
+      expect.any(String),
+    );
+    expect(attachments.setPrimaryPhoto).toHaveBeenCalledWith(
+      env.DB,
+      "owner",
+      "asset_1",
+      "attachment_1",
+      expect.any(String),
+    );
   });
 
   it("updates and archives without permanent deletion", async () => {

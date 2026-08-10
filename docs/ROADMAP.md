@@ -4,7 +4,7 @@ HomeBox Edge is a standalone, clean implementation rather than a HomeBox fork. I
 
 ## Phase 1 — usable item ledger
 
-Implemented in the current v0.1 workspace:
+Implemented in v0.1 and retained in v0.2:
 
 - owner-authenticated mobile and desktop inventory
 - create, search, view, edit, soft archive, and restore
@@ -20,7 +20,7 @@ Release gates:
 - [x] Apply remote migrations and deploy the Worker to its platform URL.
 - [x] Run authenticated 375px, 768px, and 1280px browser QA against the deployed build.
 
-The production infrastructure and browser gates were verified on 2026-08-09. The official-binary CSV round trip and isolated transaction/failure checks were also completed on 2026-08-09. On 2026-08-10, the production-build harness passed the real asset lifecycle, HomeBox CSV export, D1 parent triggers, child-before-parent import, D1/KV MCP revoke flow, security headers, and bounded request handling. Production still requires migration `0003_asset_parent_invariants.sql` and the current Worker revision before these fixes are live.
+The v0.1 production infrastructure, migrations, browser gates, official-binary CSV round trip, transaction/failure checks, D1/KV MCP revoke flow, security headers, and bounded request handling were verified on 2026-08-09–10. The v0.2 photo release separately requires the private R2 bucket, migration `0004_asset_attachments.sql`, the Images binding, and the current Worker revision.
 
 Remaining operations gates before calling the next revision launch-ready:
 
@@ -28,11 +28,20 @@ Remaining operations gates before calling the next revision launch-ready:
 - [ ] Configure an external `/healthz` monitor with an off-platform notification channel; dashboard-only visibility is insufficient.
 - [ ] Record a pre-release D1 Time Travel bookmark and execute the post-deploy smoke checks in `RELEASE.md`.
 
-## Phase 2 — collection ZIP and attachments
+## Phase 2 — photos and collection attachments
+
+Implemented in v0.2:
+
+- [x] private R2 originals and upload-time 500px WebP thumbnails
+- [x] HomeBox-style attachment metadata and one-primary-photo constraint
+- [x] mobile/web upload, photo gallery, original view, and primary selection
+- [x] owner-scoped protected media API and MCP photo metadata
+- [x] bounded uploads and compensating D1/R2 cleanup
+
+Remaining collection work:
 
 - parse and validate HomeBox schema-v1 collection ZIPs
 - stage table rows and remap IDs/foreign keys before committing
-- add R2 only when attachment read/write paths exist
 - restore attachment blobs by source attachment UUID mapping
 - enforce cumulative ZIP expansion and bounded input limits
 - compensate D1 and R2 writes when a restore step fails
@@ -42,7 +51,7 @@ This phase must not reuse raw HomeBox database rows as the internal domain model
 
 ## Phase 3 — household workflows
 
-- photo and document capture from mobile
+- document/manual/receipt capture from mobile
 - barcode/QR lookup with explicit confirmation before asset mutation
 - maintenance and warranty reminders with failure notifications
 - optional multi-owner collections and scoped invitations

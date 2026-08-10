@@ -63,7 +63,7 @@ export async function handleMcp(request: Request, env: McpEnv): Promise<Response
     return jsonRpc(rpc.id, {
       protocolVersion: "2025-06-18",
       capabilities: { tools: {} },
-      serverInfo: { name: "homebox-edge", version: "0.1.0" },
+      serverInfo: { name: "homebox-edge", version: "0.2.0" },
     });
   }
   if (rpc.method === "notifications/initialized") return new Response(null, { status: 202 });

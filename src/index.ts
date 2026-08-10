@@ -11,6 +11,7 @@ import {
   readJsonBody,
 } from "./http/body";
 import { issueKey, listKeys, revokeKey } from "./key-manager";
+import { publicAttachment, uploadAssetPhoto } from "./media/asset-photos";
 import { handleMcp } from "./mcp/handler";
 import {
   archiveAsset,
@@ -21,6 +22,13 @@ import {
   updateAsset,
   upsertImportedAssets,
 } from "./storage/assets";
+import {
+  getAttachment,
+  listAttachments,
+  listPrimaryPhotoAttachments,
+  setPrimaryPhoto,
+  updateAttachmentTitle,
+} from "./storage/attachments";
 
 type RuntimeEnv = Env & {
   ADMIN_TOKEN?: string;
@@ -40,13 +48,20 @@ const CsvImportPayloadSchema = z
     confirmed: z.boolean(),
   })
   .strict();
+const AttachmentPatchSchema = z
+  .object({
+    title: z.string().trim().min(1).max(255).optional(),
+    primary: z.literal(true).optional(),
+  })
+  .strict()
+  .refine((value) => value.title !== undefined || value.primary === true);
 
 const SECURITY_HEADERS = {
   "Content-Security-Policy": [
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self'",
-    "img-src 'self' data:",
+    "img-src 'self' data: blob:",
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",
@@ -55,7 +70,7 @@ const SECURITY_HEADERS = {
   ].join("; "),
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "no-referrer",
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Permissions-Policy": "camera=(self), microphone=(), geolocation=()",
   "X-Frame-Options": "DENY",
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
 } as const;
@@ -100,7 +115,7 @@ app.onError((error, context) => {
 });
 
 app.get("/healthz", (context) =>
-  context.json({ ok: true, service: "homebox-edge", version: "0.1.0" }),
+  context.json({ ok: true, service: "homebox-edge", version: "0.2.0" }),
 );
 
 app.post("/mcp", (context) => handleMcp(context.req.raw, context.env));
@@ -164,7 +179,25 @@ app.get("/api/assets", async (context) => {
         includeArchived,
       )
     : await listAssets(context.env.DB, context.get("ownerId"), includeArchived);
-  return context.json({ assets });
+  const origin = new URL(context.req.url).origin;
+  const primaryPhotos = await listPrimaryPhotoAttachments(
+    context.env.DB,
+    context.get("ownerId"),
+  );
+  const primaryByAsset = new Map(
+    primaryPhotos.map((attachment) => [
+      attachment.asset_id,
+      publicAttachment(origin, attachment),
+    ]),
+  );
+  return context.json({
+    assets: assets.map((asset) => ({
+      ...asset,
+      ...(primaryByAsset.has(asset.id)
+        ? { primary_photo: primaryByAsset.get(asset.id) }
+        : {}),
+    })),
+  });
 });
 
 app.post("/api/assets", async (context) => {
@@ -189,9 +222,113 @@ app.get("/api/assets/:id", async (context) => {
     context.get("ownerId"),
     context.req.param("id"),
   );
-  return asset
-    ? context.json({ asset })
-    : context.json({ error: "Asset not found" }, 404);
+  if (!asset) return context.json({ error: "Asset not found" }, 404);
+  const attachments = await listAttachments(
+    context.env.DB,
+    context.get("ownerId"),
+    asset.id,
+  );
+  const origin = new URL(context.req.url).origin;
+  return context.json({
+    asset: {
+      ...asset,
+      attachments: attachments.map((attachment) => publicAttachment(origin, attachment)),
+    },
+  });
+});
+
+app.post("/api/assets/:id/photos", async (context) => {
+  const attachment = await uploadAssetPhoto(
+    context.env,
+    context.get("ownerId"),
+    context.req.param("id"),
+    context.req.raw,
+  );
+  return context.json(
+    { attachment: publicAttachment(new URL(context.req.url).origin, attachment) },
+    201,
+  );
+});
+
+async function attachmentResponse(
+  env: RuntimeEnv,
+  ownerId: string,
+  assetId: string,
+  attachmentId: string,
+  thumbnail: boolean,
+): Promise<Response> {
+  const attachment = await getAttachment(env.DB, ownerId, assetId, attachmentId);
+  if (!attachment) return Response.json({ error: "Attachment not found" }, { status: 404 });
+  const key = thumbnail ? attachment.thumbnail_key : attachment.object_key;
+  if (!key) return Response.json({ error: "Thumbnail not found" }, { status: 404 });
+  const object = await env.ASSET_FILES.get(key);
+  if (!object) return Response.json({ error: "Attachment object not found" }, { status: 404 });
+  const headers = new Headers({
+    "Content-Type": thumbnail ? "image/webp" : attachment.mime_type,
+    "Content-Length": String(object.size),
+    "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(attachment.title)}`,
+    "Cache-Control": "private, no-store",
+    ETag: object.httpEtag ?? object.etag,
+  });
+  return new Response(object.body, { headers });
+}
+
+app.get("/api/assets/:id/attachments/:attachmentId", (context) =>
+  attachmentResponse(
+    context.env,
+    context.get("ownerId"),
+    context.req.param("id"),
+    context.req.param("attachmentId"),
+    false,
+  ),
+);
+
+app.get("/api/assets/:id/attachments/:attachmentId/thumbnail", (context) =>
+  attachmentResponse(
+    context.env,
+    context.get("ownerId"),
+    context.req.param("id"),
+    context.req.param("attachmentId"),
+    true,
+  ),
+);
+
+app.patch("/api/assets/:id/attachments/:attachmentId", async (context) => {
+  const body = await readJsonBody(context.req.raw, MAX_STANDARD_JSON_BYTES);
+  const patch = AttachmentPatchSchema.safeParse(body);
+  if (!patch.success) return context.json({ error: "Invalid attachment patch" }, 400);
+  const ownerId = context.get("ownerId");
+  const assetId = context.req.param("id");
+  const attachmentId = context.req.param("attachmentId");
+  const attachment = await getAttachment(
+    context.env.DB,
+    ownerId,
+    assetId,
+    attachmentId,
+  );
+  if (!attachment) return context.json({ error: "Attachment not found" }, 404);
+  const now = new Date().toISOString();
+  if (patch.data.title !== undefined) {
+    await updateAttachmentTitle(
+      context.env.DB,
+      ownerId,
+      assetId,
+      attachmentId,
+      patch.data.title,
+      now,
+    );
+  }
+  if (patch.data.primary === true) {
+    const changed = await setPrimaryPhoto(
+      context.env.DB,
+      ownerId,
+      assetId,
+      attachmentId,
+      now,
+    );
+    if (!changed) return context.json({ error: "Photo not found" }, 404);
+  }
+  return context.json({ updated: true });
 });
 
 app.patch("/api/assets/:id", async (context) => {
@@ -272,7 +409,7 @@ app.all("*", async (context) => {
     /^\/a\/[^/]+\/?$/.test(requestUrl.pathname);
   if (isAppRoute) {
     requestUrl.pathname = "/";
-    requestUrl.searchParams.set("asset-version", "sha256-88e61cd01f58");
+    requestUrl.searchParams.set("asset-version", "sha256-2d2e9be37c3e");
   }
   const response = await context.env.ASSETS.fetch(
     new Request(requestUrl, context.req.raw),

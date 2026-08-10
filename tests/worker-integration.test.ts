@@ -227,6 +227,77 @@ describe("production-build Worker integration", () => {
     await expect(imported.json()).resolves.toMatchObject({ created: 2, updated: 0 });
   });
 
+  it("creates HomeBox-style photo metadata with one primary photo per asset", async () => {
+    const created = await createAsset({ name: "Photo test asset" });
+    const createdAsset = (await created.json()) as { asset: { id: string } };
+    const worker = server.getWorker<Env>("homebox-edge");
+    const env = await worker.getEnv();
+    const now = new Date().toISOString();
+    const insert = (id: string, primary: number) =>
+      env.DB.prepare(
+        `INSERT INTO asset_attachments (
+          id, user_id, asset_id, type, primary_photo, title, object_key,
+          thumbnail_key, mime_type, size_bytes, width, height, created_at, updated_at
+        ) VALUES (?, 'owner', ?, 'photo', ?, ?, ?, ?, 'image/jpeg', 3, 1200, 800, ?, ?)`,
+      )
+        .bind(
+          id,
+          createdAsset.asset.id,
+          primary,
+          `${id}.jpg`,
+          `owner/${id}/original`,
+          `owner/${id}/thumbnail.webp`,
+          now,
+          now,
+        )
+        .run();
+
+    await expect(insert("photo_1", 1)).resolves.toMatchObject({ success: true });
+    await expect(insert("photo_2", 1)).rejects.toThrow();
+    await expect(insert("photo_2", 0)).resolves.toMatchObject({ success: true });
+    await expect(
+      env.DB.prepare(
+        `INSERT INTO asset_attachments (
+          id, user_id, asset_id, type, primary_photo, title, object_key,
+          thumbnail_key, mime_type, size_bytes, created_at, updated_at
+        ) VALUES ('photo_outsider', 'outsider', ?, 'photo', 0, 'No access',
+          'outsider/original', 'outsider/thumbnail', 'image/jpeg', 3, ?, ?)`,
+      )
+        .bind(createdAsset.asset.id, now, now)
+        .run(),
+    ).rejects.toThrow(/attachment asset owner mismatch/i);
+
+    await env.ASSET_FILES.put("owner/photo_1/original", new Uint8Array([1, 2, 3]), {
+      httpMetadata: { contentType: "image/jpeg" },
+    });
+    await env.ASSET_FILES.put("owner/photo_1/thumbnail.webp", new Uint8Array([4, 5, 6]), {
+      httpMetadata: { contentType: "image/webp" },
+    });
+    await expect((await server.fetch("/api/assets", { headers: authorization })).json()).resolves.toMatchObject({
+      assets: [{
+        id: createdAsset.asset.id,
+        primary_photo: { id: "photo_1", thumbnail_url: expect.stringContaining("/thumbnail") },
+      }],
+    });
+    const detail = await server.fetch(`/api/assets/${createdAsset.asset.id}`, {
+      headers: authorization,
+    });
+    const detailBody = (await detail.json()) as {
+      asset: { attachments: Array<{ id: string; original_url: string }> };
+    };
+    expect(detailBody.asset.attachments).toHaveLength(2);
+    expect(detailBody.asset.attachments.find(({ id }) => id === "photo_1")).toMatchObject({
+      original_url: expect.stringContaining("photo_1"),
+    });
+    const thumbnail = await server.fetch(
+      `/api/assets/${createdAsset.asset.id}/attachments/photo_1/thumbnail`,
+      { headers: authorization },
+    );
+    expect(thumbnail.status).toBe(200);
+    expect(thumbnail.headers.get("Content-Type")).toBe("image/webp");
+    expect(new Uint8Array(await thumbnail.arrayBuffer())).toEqual(new Uint8Array([4, 5, 6]));
+  });
+
   it("uses real D1 and KV bindings for a revocable MCP connection", async () => {
     const created = await server.fetch("/api/keys", {
       method: "POST",

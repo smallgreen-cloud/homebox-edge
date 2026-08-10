@@ -1,3 +1,5 @@
+import { createKeyUi } from "./keys.js?v=acc6378544c1";
+import { createPhotoUi } from "./photos.js?v=e4e113340478";
 const byId = (id) => document.getElementById(id);
 
 const COPY = {
@@ -38,6 +40,23 @@ const COPY = {
     quantity: "數量",
     notes: "備註",
     notesPlaceholder: "購買來源、收納方式或家人需要知道的事",
+    optionalPhoto: "首張照片（選填）",
+    photoFileNote: "可直接拍照或選擇圖片，單張最多 8 MB。",
+    assetPhotos: "資產照片",
+    addPhoto: "＋ 新增照片",
+    noPhotos: "還沒有照片。從手機拍一張，之後盤點會更快。",
+    primaryPhoto: "主圖",
+    makePrimary: "設為主圖",
+    viewOriginal: "查看原圖",
+    loadingOriginal: "載入原圖中…",
+    photoLoadFailed: "照片載入失敗",
+    uploadingPhoto: "正在處理照片與縮圖…",
+    photoUploaded: "照片與縮圖已新增",
+    selectingPrimary: "正在更新主圖…",
+    primaryUpdated: "主圖已更新",
+    unsupportedPhoto: "請選擇 JPEG、PNG、WebP、GIF 或 AVIF 圖片。",
+    photoTooLarge: "照片超過 8 MB，請選擇較小的檔案。",
+    assetAddedPhotoFailed: "資產已新增，但照片未上傳：{reason}",
     addAsset: "新增資產",
     importHomebox: "匯入 HomeBox 檔案",
     chooseFile: "選擇 CSV 或 TSV",
@@ -138,6 +157,23 @@ const COPY = {
     quantity: "Quantity",
     notes: "Notes",
     notesPlaceholder: "Purchase source, storage details, or anything your household should know",
+    optionalPhoto: "First photo (optional)",
+    photoFileNote: "Take a photo or choose an image, up to 8 MB each.",
+    assetPhotos: "Asset Photos",
+    addPhoto: "+ Add photo",
+    noPhotos: "No photos yet. Add one from your phone to make future inventories faster.",
+    primaryPhoto: "Primary",
+    makePrimary: "Make primary",
+    viewOriginal: "View original",
+    loadingOriginal: "Loading original…",
+    photoLoadFailed: "Photo failed to load",
+    uploadingPhoto: "Processing photo and thumbnail…",
+    photoUploaded: "Photo and thumbnail added",
+    selectingPrimary: "Updating primary photo…",
+    primaryUpdated: "Primary photo updated",
+    unsupportedPhoto: "Choose a JPEG, PNG, WebP, GIF, or AVIF image.",
+    photoTooLarge: "This photo is larger than 8 MB. Choose a smaller file.",
+    assetAddedPhotoFailed: "Asset added, but its photo was not uploaded: {reason}",
     addAsset: "Add asset",
     importHomebox: "Import a HomeBox file",
     chooseFile: "Choose a CSV or TSV file",
@@ -207,7 +243,6 @@ const state = {
   token: localStorage.getItem("homeboxEdgeToken") || "",
   locale: localStorage.getItem("homeboxEdgeLocale") === "en" ? "en" : "zh-Hant",
   assets: [],
-  keys: [],
   query: "",
   includeArchived: false,
   importCsv: "",
@@ -253,10 +288,9 @@ function applyTranslations() {
   );
   if (!byId("inventory").hidden) {
     renderAssets();
-    renderKeys();
+    keyUi.render();
   }
 }
-
 
 function showStatus(message, error = false) {
   const target = byId("status");
@@ -290,6 +324,16 @@ async function api(path, options = {}) {
   return response;
 }
 
+const photoUi = createPhotoUi({ api, byId, loadAssets, showStatus, t });
+const keyUi = createKeyUi({
+  api,
+  byId,
+  getLocale: () => state.locale,
+  setBusy,
+  showStatus,
+  t,
+});
+
 function locationText(asset) {
   return asset.location?.length ? asset.location.join(" / ") : t("noLocation");
 }
@@ -310,6 +354,7 @@ function renderAssetLoading() {
 
 function renderAssets() {
   const grid = byId("assetGrid");
+  photoUi.beginCardRender();
   grid.setAttribute("aria-busy", "false");
   grid.replaceChildren();
   byId("assetCount").textContent = String(state.assets.length);
@@ -400,6 +445,7 @@ function renderAssets() {
     actions.append(edit, menu);
     article.append(heading, location, metadata, actions);
     grid.append(article);
+    photoUi.attachCardImage(article, asset);
   });
 }
 
@@ -422,7 +468,7 @@ async function enterInventory() {
   byId("inventory").hidden = false;
   byId("logoutButton").hidden = false;
   renderAssetLoading();
-  await Promise.all([loadAssets(), loadKeys()]);
+  await Promise.all([loadAssets(), keyUi.load()]);
 }
 
 byId("loginForm").addEventListener("submit", async (event) => {
@@ -450,6 +496,7 @@ byId("logoutButton").addEventListener("click", () => {
   byId("login").hidden = false;
   byId("logoutButton").hidden = true;
   byId("adminToken").value = "";
+  photoUi.reset();
   byId("adminToken").focus();
 });
 
@@ -509,7 +556,7 @@ byId("assetForm").addEventListener("submit", async (event) => {
   button.dataset.label = button.textContent;
   setBusy(button, true, t("addingAsset"));
   try {
-    await api("/api/assets", {
+    const response = await api("/api/assets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -520,11 +567,26 @@ byId("assetForm").addEventListener("submit", async (event) => {
         notes: String(data.get("notes") || "") || undefined,
       }),
     });
+    const { asset } = await response.json();
+    const photo = byId("createAssetPhotoInput").files?.[0];
+    let photoError = null;
+    if (photo) {
+      try {
+        await photoUi.uploadPhoto(asset.id, photo, true);
+      } catch (error) {
+        photoError = error;
+      }
+    }
     form.reset();
     form.elements.quantity.value = "1";
     byId("createPanel").open = false;
     await loadAssets();
-    showStatus(t("assetAdded"));
+    showStatus(
+      photoError
+        ? t("assetAddedPhotoFailed", { reason: photoError.message })
+        : t("assetAdded"),
+      Boolean(photoError),
+    );
   } catch (error) {
     showStatus(error.message, true);
   } finally {
@@ -579,9 +641,11 @@ async function openAssetDialog(assetId) {
   formControl(form, "lifetime_warranty").checked = asset.lifetime_warranty;
   byId("assetDialogTitle").textContent = asset.name;
   assetDialog.showModal();
+  await photoUi.renderAsset(asset);
 }
 
 function closeAssetDialog() {
+  photoUi.closeDialog();
   assetDialog.close();
 }
 
@@ -719,74 +783,6 @@ byId("exportButton").addEventListener("click", async () => {
     link.click();
     URL.revokeObjectURL(url);
     showStatus(t("csvDownloaded"));
-  } catch (error) {
-    showStatus(error.message, true);
-  } finally {
-    setBusy(button, false);
-  }
-});
-
-function renderKeys() {
-  const target = byId("keyList");
-  target.replaceChildren();
-  if (state.keys.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "field-note";
-    empty.textContent = t("noMcp");
-    target.append(empty);
-    return;
-  }
-  for (const key of state.keys) {
-    const row = document.createElement("div");
-    row.className = "key-row";
-    const details = document.createElement("div");
-    const preview = document.createElement("strong");
-    preview.textContent = key.preview;
-    const expiry = document.createElement("span");
-    expiry.textContent = t("validUntil", {
-      date: new Date(key.expires_at * 1000).toLocaleDateString(
-        state.locale === "en" ? "en-US" : "zh-TW",
-      ),
-    });
-    details.append(preview, expiry);
-    const revoke = document.createElement("button");
-    revoke.className = "text-button danger-button";
-    revoke.type = "button";
-    revoke.textContent = t("revoke");
-    revoke.addEventListener("click", async () => {
-      revoke.dataset.label = revoke.textContent;
-      setBusy(revoke, true, t("revoking"));
-      try {
-        await api(`/api/keys/${encodeURIComponent(key.id)}`, { method: "DELETE" });
-        await loadKeys();
-        showStatus(t("mcpRevoked"));
-      } catch (error) {
-        showStatus(error.message, true);
-        setBusy(revoke, false);
-      }
-    });
-    row.append(details, revoke);
-    target.append(row);
-  }
-}
-
-async function loadKeys() {
-  const response = await api("/api/keys");
-  const body = await response.json();
-  state.keys = body.keys;
-  renderKeys();
-}
-
-byId("createKeyButton").addEventListener("click", async () => {
-  const button = byId("createKeyButton");
-  button.dataset.label = button.textContent;
-  setBusy(button, true, t("creatingConnection"));
-  try {
-    const response = await api("/api/keys", { method: "POST" });
-    const result = await response.json();
-    byId("connectorOutput").textContent = result.connector_url;
-    await loadKeys();
-    showStatus(t("mcpCreated"));
   } catch (error) {
     showStatus(error.message, true);
   } finally {

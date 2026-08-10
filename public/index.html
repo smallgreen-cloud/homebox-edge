@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#243c31">
     <title>HomeBox Edge｜家庭資產管理</title>
-    <link rel="stylesheet" href="/styles.css?v=c15ea5c4df60">
+    <link rel="stylesheet" href="/styles.css?v=0ccf23d67fd4">
   </head>
   <body>
     <a class="skip-link" href="#main-content" data-i18n="skipToAssets">跳到資產清單</a>
@@ -99,6 +99,10 @@
                 <label data-i18n-label="tags">標籤<input name="tags" placeholder="家電；保固中" data-i18n-placeholder="tagsPlaceholder"></label>
                 <label data-i18n-label="quantity">數量<input name="quantity" type="number" min="0" step="0.01" value="1"></label>
                 <label class="wide" data-i18n-label="notes">備註<textarea name="notes" rows="2" placeholder="購買來源、收納方式或家人需要知道的事" data-i18n-placeholder="notesPlaceholder"></textarea></label>
+                <label class="photo-file-field wide" data-i18n-label="optionalPhoto">首張照片（選填）
+                  <input id="createAssetPhotoInput" name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+                  <span class="field-note" data-i18n="photoFileNote">可直接拍照或選擇圖片，單張最多 8 MB。</span>
+                </label>
                 <button class="primary-button" type="submit" data-i18n="addAsset">新增資產</button>
               </form>
             </details>
@@ -137,6 +141,18 @@
         </div>
         <button id="closeAssetDialog" class="text-button" type="button" aria-label="關閉資產詳情" data-i18n="close" data-i18n-aria-label="closeAssetDetails">關閉</button>
       </div>
+      <section class="asset-photo-section" aria-labelledby="assetPhotosTitle">
+        <div class="asset-photo-heading">
+          <div>
+            <p class="eyebrow">ASSET PHOTOS</p>
+            <h3 id="assetPhotosTitle" data-i18n="assetPhotos">資產照片</h3>
+          </div>
+          <label class="photo-upload-button" for="assetPhotoInput" data-i18n="addPhoto">＋ 新增照片</label>
+          <input id="assetPhotoInput" class="sr-only" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+        </div>
+        <div id="assetPhotoHero" class="asset-photo-hero" aria-live="polite"></div>
+        <div id="assetPhotoGallery" class="asset-photo-gallery" role="list"></div>
+      </section>
       <form id="assetEditForm" class="asset-edit-form">
         <input name="id" type="hidden">
         <label data-i18n-label="name">名稱<input name="name" required maxlength="255"></label>
@@ -159,6 +175,6 @@
     </dialog>
 
     <div id="status" class="status" role="status" aria-live="polite"></div>
-    <script type="module" src="/app.js?v=ad26faafcd6a"></script>
+    <script type="module" src="/app.js?v=f74708fd7e18"></script>
   </body>
 </html>

@@ -9,7 +9,12 @@ const storage = vi.hoisted(() => ({
   updateAsset: vi.fn(),
   archiveAsset: vi.fn(),
 }));
+const attachments = vi.hoisted(() => ({
+  listAttachments: vi.fn(),
+  listPrimaryPhotoAttachments: vi.fn(),
+}));
 vi.mock("../src/storage/assets", () => storage);
+vi.mock("../src/storage/attachments", () => attachments);
 
 import { callTool, TOOL_DEFINITIONS } from "../src/mcp/tools";
 
@@ -39,6 +44,8 @@ beforeEach(() => {
   storage.updateAsset.mockResolvedValue(true);
   storage.archiveAsset.mockResolvedValue(true);
   storage.upsertImportedAssets.mockResolvedValue({ created: 1, updated: 0 });
+  attachments.listAttachments.mockResolvedValue([]);
+  attachments.listPrimaryPhotoAttachments.mockResolvedValue([]);
 });
 
 describe("household asset MCP tools", () => {
@@ -102,6 +109,39 @@ describe("household asset MCP tools", () => {
       }),
     ).rejects.toThrow("own parent");
     expect(storage.insertAsset).not.toHaveBeenCalled();
+  });
+
+  it("returns photo and thumbnail metadata to MCP agents without exposing R2 keys", async () => {
+    const photo = {
+      id: "attachment_1",
+      asset_id: "asset_1",
+      type: "photo",
+      primary_photo: true,
+      title: "Laptop.jpg",
+      object_key: "private-original-key",
+      thumbnail_key: "private-thumbnail-key",
+      mime_type: "image/jpeg",
+      size_bytes: 3,
+      width: 1200,
+      height: 800,
+      created_at: asset.created_at,
+      updated_at: asset.updated_at,
+    };
+    attachments.listPrimaryPhotoAttachments.mockResolvedValue([photo]);
+    attachments.listAttachments.mockResolvedValue([photo]);
+
+    await expect(callTool(env, "owner", "search_assets", { query: "Laptop" })).resolves.toEqual([
+      expect.objectContaining({
+        primary_photo: expect.objectContaining({
+          thumbnail_url: "https://inventory.example/api/assets/asset_1/attachments/attachment_1/thumbnail",
+        }),
+      }),
+    ]);
+    const detail = await callTool(env, "owner", "get_asset", { asset_id: "asset_1" });
+    expect(detail).toMatchObject({
+      attachments: [{ original_url: expect.stringContaining("attachment_1") }],
+    });
+    expect(JSON.stringify(detail)).not.toContain("private-original-key");
   });
 
   it("previews CSV without writing and imports only after confirmation", async () => {

@@ -1,10 +1,10 @@
-# HomeBox Edge v0.1 specification
+# HomeBox Edge v0.2 specification
 
 ## Product boundary
 
-HomeBox Edge is an unofficial, serverless household asset system. It reuses the TapCard MCP deployment shape—Cloudflare Worker, D1, KV, static mobile/web UI, owner authentication, and Remote MCP—but replaces the contact domain with household assets. R2 is reserved for the later attachment phase and is deliberately absent from the v0.1 runtime bindings.
+HomeBox Edge is an unofficial, serverless household asset system. It reuses the TapCard MCP deployment shape—Cloudflare Worker, D1, KV, private R2, Cloudflare Images, static mobile/web UI, owner authentication, and Remote MCP—but replaces the contact domain with household assets.
 
-v0.1 includes asset CRUD, keyword search, soft archive, HomeBox v0.26.2 CSV/TSV import, canonical CSV export, web/mobile access, and Remote MCP. Full HomeBox collection-ZIP restore, multi-user collections, barcode enrichment, notifications, and vector search are later phases.
+v0.2 includes asset CRUD, keyword search, soft archive, private photo originals, generated thumbnails, primary-photo selection, HomeBox v0.26.2 CSV/TSV import, canonical CSV export, web/mobile access, and Remote MCP. Full HomeBox collection-ZIP restore/export, multi-user collections, barcode enrichment, notifications, and vector search are later phases.
 
 ## Invariants
 
@@ -24,6 +24,10 @@ v0.1 includes asset CRUD, keyword search, soft archive, HomeBox v0.26.2 CSV/TSV 
 14. D1 is the authoritative MCP key registry; KV is not used as a mutable owner-key index.
 15. Parent existence and acyclic parent relationships are enforced in both the domain layer and D1 triggers so bypasses fail closed.
 16. Public API and MCP failures expose only stable client-safe messages; infrastructure details remain in structured server logs.
+17. Photo input is type-allowlisted and byte-bounded before buffering; SVG is not accepted.
+18. D1 stores attachment ownership and R2 object references; private object keys never appear in public API or MCP results.
+19. Every photo original has an upload-time 500px WebP thumbnail, and one asset has at most one primary photo.
+20. R2 writes are compensated when D1 attachment metadata cannot commit.
 
 ## Error contract
 
