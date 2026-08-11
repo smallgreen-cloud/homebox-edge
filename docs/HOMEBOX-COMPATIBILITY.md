@@ -12,13 +12,14 @@ This project is an independent implementation. It does not copy HomeBox AGPL sou
 
 ## Compatibility levels
 
-| Level | Scope | v0.1 status |
+| Level | Scope | v0.2 status |
 |---|---|---|
 | Item interchange | HomeBox CSV/TSV import and CSV export | Implemented first |
 | Collection inspection | ZIP manifest and entry contract validation | Contract pinned |
 | Collection restore | Full ZIP table, ID/FK and attachment restore | Planned after CSV bidirectional verification |
+| Photo model | Attachment metadata, primary photo, original and thumbnail | Implemented internally; ZIP mapping pending |
 
-“HomeBox-compatible” in v0.1 means item interchange compatibility. It does not yet mean byte-identical full collection backup compatibility.
+“HomeBox-compatible” in v0.2 means item interchange plus compatible photo concepts. It does not yet mean byte-identical full collection backup compatibility; HomeBox CSV itself carries no attachment blobs.
 
 ## CSV/TSV item interchange
 

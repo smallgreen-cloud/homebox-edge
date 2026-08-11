@@ -32,4 +32,13 @@ describe("release quality gate", () => {
     expect(migration.match(/CREATE TRIGGER/g)).toHaveLength(3);
     expect(migration).not.toMatch(/\bCASE\b/i);
   });
+
+  it("binds private object storage and image transformation for photo attachments", async () => {
+    const config = await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8");
+
+    expect(config).toContain('"binding": "ASSET_FILES"');
+    expect(config).toContain('"bucket_name": "homebox-edge-files"');
+    expect(config).toContain('"images"');
+    expect(config).toContain('"binding": "IMAGES"');
+  });
 });

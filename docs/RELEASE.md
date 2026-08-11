@@ -16,7 +16,7 @@ npm audit --omit=dev --audit-level=high
 git diff --check
 ```
 
-The test command includes a production-build Worker harness backed by real local Workerd, D1 migrations, and KV bindings. Do not lower coverage thresholds to pass a release.
+The test command includes a production-build Worker harness backed by real local Workerd, D1 migrations, KV, and private R2 bindings. Do not lower coverage thresholds to pass a release.
 
 ## 2. Production change inventory
 
@@ -27,6 +27,12 @@ npx wrangler d1 time-travel info homebox-edge --json
 ```
 
 Save the Time Travel bookmark and timestamp in the release record before changing D1. Confirm that the listed migrations are exactly the reviewed files in `migrations/`. Stop if an unexpected migration, binding, or deployment is present.
+
+For the first photo-enabled release, confirm the private bucket exists before deploy:
+
+```bash
+npx wrangler r2 bucket list
+```
 
 ## 3. Apply and deploy
 
@@ -46,6 +52,7 @@ Do not report completion until Wrangler reports a successful deployment and the 
 4. Create one short-lived MCP connector, call `initialize`, revoke it, then confirm the same connector returns HTTP 401.
 5. Test the Traditional Chinese and English UI at 375, 768, and 1280 CSS pixels and confirm there is no horizontal overflow.
 6. Inspect Worker error logs for the smoke-test window; any unhandled exception blocks the release.
+7. Upload a small JPEG/PNG, confirm the card thumbnail and protected original both render, switch the primary photo, and verify the R2 object count increased by two.
 
 Never paste the admin credential or full MCP connector URL into issue text, logs, screenshots, or the release record.
 

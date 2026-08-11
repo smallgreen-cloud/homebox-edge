@@ -2,7 +2,7 @@
 
 HomeBox Edge 是一套非官方、serverless、HomeBox-compatible 的家庭資產管理系統。它沿用 TapCard MCP 的 Cloudflare-only 形狀：同一個 Worker 提供手機／網頁 UI、私人 API、Remote MCP、D1 資料與全文搜尋，以及可撤銷的 MCP key。
 
-它不是 HomeBox fork，也不包含 HomeBox 的 AGPL 程式碼。v0.1 的「HomeBox-compatible」明確指向 HomeBox `v0.26.2` 的物件 CSV/TSV 雙向交換。
+它不是 HomeBox fork，也不包含 HomeBox 的 AGPL 程式碼。v0.2 的「HomeBox-compatible」指向 HomeBox `v0.26.2` 的物件 CSV/TSV 雙向交換，以及相同的附件／主圖概念；尚未宣稱完整 collection ZIP restore 相容。
 
 正式服務：<https://homebox-edge.alan-chen75.workers.dev>
 
@@ -10,6 +10,7 @@ HomeBox Edge 是一套非官方、serverless、HomeBox-compatible 的家庭資�
 
 - 手機與桌面共用的家庭資產清單
 - 新增、搜尋、詳情編輯、封存與還原
+- 手機拍照／選圖、首張自動主圖、主圖切換、500px WebP 縮圖與受保護原圖
 - 可選擇同時瀏覽及搜尋已封存資產
 - D1 + FTS5：名稱、位置、品牌、型號、序號、標籤與自訂欄位搜尋
 - HomeBox CSV/TSV 預覽；預覽不寫入
@@ -19,6 +20,7 @@ HomeBox Edge 是一套非官方、serverless、HomeBox-compatible 的家庭資�
 - Remote MCP 與個別可撤銷的 `hi_` connector key；D1/KV 只保存 SHA-256 指紋索引
 - UI 可列出 MCP key 預覽、到期日並個別撤銷；完整 URL 只在建立時顯示
 - MCP tool schema 完整公開 HomeBox-compatible 欄位並拒絕未宣告輸入
+- MCP 搜尋與詳情回傳照片 metadata、原圖與縮圖 API 路徑，不暴露 R2 object key
 - 完整 collection ZIP manifest/table 契約已固定，restore 尚未開放
 
 ## 架構
@@ -30,7 +32,9 @@ Mobile / Browser / AI client
        ├── Static Assets：responsive UI
        ├── owner API + Remote MCP
        ├── HomeBox CSV compatibility boundary
-       ├── D1：assets + FTS5 + MCP key registry
+       ├── D1：assets + attachments + FTS5 + MCP key registry
+       ├── R2：private originals + generated thumbnails
+       ├── Images binding：upload-time 500px WebP transform
        └── KV：legacy MCP credential compatibility mirror
 ```
 
@@ -79,9 +83,10 @@ npm run dev
 ```bash
 npx wrangler d1 create homebox-edge
 npx wrangler kv namespace create MCP_KEYS
+npx wrangler r2 bucket create homebox-edge-files
 ```
 
-把 D1 與 KV ID、`PUBLIC_BASE_URL` 填入 `wrangler.jsonc`，再用 secret 設定管理憑證。管理憑證不得寫入原始碼或 Wrangler vars：
+把 D1、KV、private R2 與 Images binding、`PUBLIC_BASE_URL` 填入 `wrangler.jsonc`，再用 secret 設定管理憑證。管理憑證不得寫入原始碼或 Wrangler vars：
 
 ```bash
 npx wrangler secret put ADMIN_TOKEN
@@ -100,12 +105,12 @@ npx wrangler deploy
 
 repo 內只有依 HomeBox 公開格式製作的合成測試資料，不含真實家庭資產、部署 ID、API key 或其他 secrets。
 
-## v0.1 邊界
+## v0.2 邊界
 
 - 支援 HomeBox item CSV/TSV；尚未宣稱完整 collection ZIP restore 相容。
-- CSV 交換不包含照片與附件，這也符合 HomeBox CSV 的既有限制。
-- R2 照片／文件將與 collection ZIP attachment mapping 一起進入下一階段。
-- 目前為單一 owner 部署；多人 collection 不在 v0.1。
+- CSV 交換不包含照片與附件，這符合 HomeBox CSV 的既有限制；照片目前保留在本服務的 D1/R2。
+- 已支援照片原圖、縮圖與主圖，但 collection ZIP attachment mapping／restore／export 仍在下一階段。
+- 目前為單一 owner 部署；多人 collection 不在 v0.2。
 
 ## License
 

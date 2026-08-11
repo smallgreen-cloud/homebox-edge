@@ -6,7 +6,9 @@ import {
   HomeAssetSchema,
   type StoredHomeAsset,
 } from "../core/asset";
+import type { StoredAssetAttachment } from "../core/attachment";
 import { InvalidRequestError, NotFoundError } from "../errors";
+import { publicAttachment } from "../media/asset-photos";
 import {
   archiveAsset,
   getAsset,
@@ -16,6 +18,10 @@ import {
   updateAsset,
   upsertImportedAssets,
 } from "../storage/assets";
+import {
+  listAttachments,
+  listPrimaryPhotoAttachments,
+} from "../storage/attachments";
 
 type ToolEnv = {
   DB: Env["DB"];
@@ -79,10 +85,20 @@ export const TOOL_DEFINITIONS = [
   },
 ] as const;
 
-function publicAsset(env: ToolEnv, asset: StoredHomeAsset) {
+function publicAsset(
+  env: ToolEnv,
+  asset: StoredHomeAsset,
+  attachments?: readonly StoredAssetAttachment[],
+) {
+  const photos = attachments?.map((attachment) =>
+    publicAttachment(env.PUBLIC_BASE_URL, attachment),
+  );
+  const primaryPhoto = photos?.find((attachment) => attachment.primary_photo);
   return {
     ...asset,
     detail_url: `${env.PUBLIC_BASE_URL.replace(/\/$/, "")}/a/${encodeURIComponent(asset.id)}`,
+    ...(photos ? { attachments: photos } : {}),
+    ...(primaryPhoto ? { primary_photo: primaryPhoto } : {}),
   };
 }
 
@@ -107,15 +123,24 @@ export async function callTool(
   }
   if (name === "search_assets") {
     const { query } = SearchSchema.parse(args);
-    return (await searchAssets(env.DB, userId, query)).map((asset) =>
-      publicAsset(env, asset),
+    const [assets, primaryPhotos] = await Promise.all([
+      searchAssets(env.DB, userId, query),
+      listPrimaryPhotoAttachments(env.DB, userId),
+    ]);
+    const primaryByAsset = new Map(
+      primaryPhotos.map((attachment) => [attachment.asset_id, attachment]),
     );
+    return assets.map((asset) => {
+      const primary = primaryByAsset.get(asset.id);
+      return publicAsset(env, asset, primary ? [primary] : []);
+    });
   }
   if (name === "get_asset") {
     const { asset_id: id } = AssetIdSchema.parse(args);
     const asset = await getAsset(env.DB, userId, id);
     if (!asset) throw new NotFoundError("asset not found");
-    return publicAsset(env, asset);
+    const attachments = await listAttachments(env.DB, userId, id);
+    return publicAsset(env, asset, attachments);
   }
   if (name === "update_asset") {
     const { asset_id: id, patch } = UpdateSchema.parse(args);

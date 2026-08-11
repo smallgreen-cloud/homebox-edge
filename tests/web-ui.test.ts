@@ -18,6 +18,8 @@ describe("mobile-first household inventory UI", () => {
     expect(html).toContain('id="includeArchived"');
     expect(html).toContain('id="assetDialog"');
     expect(html).toContain('id="assetEditForm"');
+    expect(html).toContain('id="assetPhotoInput"');
+    expect(html).toContain('id="assetPhotoGallery"');
     expect(html).toContain('id="keyList"');
     const scriptVersion = createHash("sha256").update(script).digest("hex").slice(0, 12);
     const stylesVersion = createHash("sha256").update(styles).digest("hex").slice(0, 12);
@@ -26,7 +28,12 @@ describe("mobile-first household inventory UI", () => {
   });
 
   it("persists the owner session, supports file preview and uses accessible feedback", async () => {
-    const script = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+    const [appScript, photoScript, keyScript] = await Promise.all([
+      readFile(new URL("../public/app.js", import.meta.url), "utf8"),
+      readFile(new URL("../public/photos.js", import.meta.url), "utf8"),
+      readFile(new URL("../public/keys.js", import.meta.url), "utf8"),
+    ]);
+    const script = `${appScript}\n${photoScript}\n${keyScript}`;
     expect(script).toContain('localStorage.setItem("homeboxEdgeToken"');
     expect(script).toContain("/api/homebox/preview");
     expect(script).toContain("/api/homebox/import");
@@ -35,6 +42,11 @@ describe("mobile-first household inventory UI", () => {
     expect(script).toContain("assetDialog.showModal()");
     expect(script).toContain("include_archived=true");
     expect(script).toContain("archived: false");
+    expect(script).toContain("/photos?");
+    expect(script).toContain("thumbnail_url");
+    expect(script).toContain("URL.createObjectURL");
+    expect(photoScript).toContain('wrapper.setAttribute("role", "listitem")');
+    expect(photoScript).not.toContain('item.setAttribute("role", "listitem")');
   });
 
   it("keeps the dialog close action readable on narrow screens", async () => {
